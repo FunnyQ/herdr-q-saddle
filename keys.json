@@ -1,0 +1,9 @@
+{
+  "global": {
+    "cmd-t": "mod.open:q-saddle-tab",
+    "cmd-shift-c": "mod.open:q-saddle-agent",
+    "cmd-o": "mod.open:q-saddle-project",
+    "cmd-r": "mod.open:q-saddle-restart",
+    "cmd-shift-s": "mod.open:q-saddle-ssh"
+  }
+}

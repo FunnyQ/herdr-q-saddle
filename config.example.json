@@ -1,0 +1,51 @@
+{
+  "default_tab_layout": "agentic-coding",
+  "tab_layouts": [
+    {
+      "name": "agentic-coding",
+      "label": "Agentic Coding",
+      "panes": [
+        { "name": "agent", "type": "agent" },
+        {
+          "name": "files",
+          "type": "command",
+          "command": "yazi .",
+          "direction": "right",
+          "ratio": 0.62
+        },
+        { "name": "term", "type": "shell", "direction": "down", "ratio": 0.1 }
+      ]
+    },
+    {
+      "name": "agent-only",
+      "label": "Agent",
+      "panes": [{ "name": "agent", "type": "agent" }]
+    }
+  ],
+  "agents": [
+    {
+      "name": "claude code",
+      "kind": "claude",
+      "command": ["claude"],
+      "efforts": ["low", "medium", "high", "xhigh", "max"],
+      "effort_args": ["--effort", "{effort}"],
+      "options": [
+        { "name": "Opus", "args": ["--model", "opus"], "effort": "medium" },
+        { "name": "Sonnet", "args": ["--model", "sonnet"], "effort": "medium" }
+      ]
+    },
+    {
+      "name": "codex",
+      "kind": "codex",
+      "command": ["codex"],
+      "efforts": ["low", "medium", "high"],
+      "effort_args": ["-c", "model_reasoning_effort={effort}"],
+      "options": [{ "name": "Default", "effort": "medium" }]
+    },
+    {
+      "name": "opencode",
+      "kind": "opencode",
+      "command": ["opencode"]
+    }
+  ]
+}
