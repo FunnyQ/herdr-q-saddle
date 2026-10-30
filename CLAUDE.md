@@ -43,7 +43,9 @@ Out of v1: worktree launcher (built-in `worktree` mod covers it), personal assis
 - No command renames a pane, so `label` and `icon` on panes are ignored; only the tab gets a name.
 - `doc.get` / `doc.set` need no `hello`: one JSON-RPC line to `hc connect --json` on stdin.
 - `mod.open` passes no props, and a mod cannot import another mod folder's files (`resolves outside the application directory`). `mods/q-saddle-agent/` only reopens `q-saddle-tab` with `openOverlay({props: {direct: true}})`.
-- Run `npm test` (node --test) for `lib.js`, `ratios.js`, `projects.js`, `restart.js`, and `ssh.js`; they import nothing from `herdr`.
+- `pane.split` returns `{pane, terminal}`.
+- `build.js` builds a layout for both the overlay and `cli.js open` (a plain-`node` CLI that cc-plugins' `herd tell` calls). Change the layout logic there, not in either caller.
+- Run `npm test` (node --test) for `lib.js`, `ratios.js`, `build.js`, `cli.js`, `projects.js`, `restart.js`, and `ssh.js`; they import nothing from `herdr`.
 
 ## Picker findings (2026-10-30)
 
