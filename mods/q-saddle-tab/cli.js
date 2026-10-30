@@ -52,7 +52,12 @@ async function open(args, io) {
       throw fail(2, `No config at ${dataDir}/config.json`);
     throw e;
   }
-  const config = JSON.parse(text);
+  let config;
+  try {
+    config = JSON.parse(text);
+  } catch (e) {
+    throw fail(1, `config.json: ${e.message}`);
+  }
   const errors = validateConfig(config);
   if (errors.length) throw fail(1, `config.json: ${errors.join("; ")}`);
   const name = flags.layout ?? config.default_tab_layout;
@@ -71,6 +76,7 @@ async function open(args, io) {
       null,
     );
   };
+  let opened;
   const { tab, ids, terminals, ratioError } = await buildTab(
     {
       exec: io.exec,
@@ -83,14 +89,23 @@ async function open(args, io) {
       argvOf: (pane) =>
         paneArgv(pane, pane.type === "agent" ? agentLaunch(pane) : null),
       ratios: config.apply_ratios !== false,
-      open: (argv) =>
-        herdrDo(io.exec, "space.new", {
+      open: async (argv) =>
+        (opened = await herdrDo(io.exec, "space.new", {
           ...(flags.name && { name: flags.name }),
           folder: flags.folder,
           ...(argv && { argv }),
-        }),
+        })),
     },
-  );
+  ).catch(async (e) => {
+    if (opened)
+      await herdrDo(io.exec, "space.close", {
+        id: opened.space,
+        confirmed: true,
+      }).catch((c) => {
+        e.message += `; ${opened.space} is still open: ${c.message}`;
+      });
+    throw e;
+  });
   if (ratioError) io.warn?.(`split ratios not applied: ${ratioError.message}`);
   const agent = layout.panes.find((p) => p.type === "agent");
   return {
@@ -125,7 +140,7 @@ if (realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
     exec,
     readFile,
     writeFile,
-    home: process.env.HERDR_APP_HOME ?? `${homedir()}/.config/herdr-app`,
+    home: process.env.HERDR_APP_HOME || `${homedir()}/.config/herdr-app`,
     warn: (message) => console.error(message),
   });
   console.log(JSON.stringify(out));

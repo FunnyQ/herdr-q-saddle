@@ -227,3 +227,26 @@ for (const [why, args] of [
     assert.equal(calls.length, 0);
   });
 }
+
+test("closes the half-built space when a split fails, so a fallback does not rerun the agent", async () => {
+  const { calls, io } = fakeHerdr();
+  const exec = io.exec;
+  io.exec = async (cmd, args) => {
+    if (args[1] === "pane.split") return { code: 1, stdout: "", stderr: "boom" };
+    if (args[1] === "space.close") {
+      calls.push([cmd, args]);
+      return { code: 0, stdout: '{"ok":true}', stderr: "" };
+    }
+    return exec(cmd, args);
+  };
+  const r = await main(["open", "--folder", "/p"], io);
+  assert.deepEqual(r, { code: 1, out: { error: "pane.split: boom" } });
+  assert.deepEqual(sent(calls, "space.close"), [{ id: "sp1", confirmed: true }]);
+});
+
+test("exit 1 naming config.json for a config that is not JSON", async () => {
+  const { io } = fakeHerdr("{nope");
+  const r = await main(["open", "--folder", "/p"], io);
+  assert.equal(r.code, 1);
+  assert.match(r.out.error, /^config\.json: /);
+});
