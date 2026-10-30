@@ -23,6 +23,7 @@ export async function buildTab(io, { panes, folder, argvOf, open, ratios }) {
   const [root, ...rest] = panes;
   const tab = await open(argvOf(root));
   const ids = { [root.name]: await paneOf(io.exec, tab.terminal) };
+  const terminals = { [root.name]: tab.terminal };
   const splits = [];
   let previous = root.name;
   for (const pane of rest) {
@@ -34,11 +35,12 @@ export async function buildTab(io, { panes, folder, argvOf, open, ratios }) {
       ...(argv && { argv }),
     });
     ids[pane.name] = made.pane;
+    terminals[pane.name] = made.terminal;
     splits.push({ pane: made.pane, from: ids[from], ratio: pane.ratio });
     previous = pane.name;
   }
   let ratioError = null;
   if (splits.length && ratios)
     await applyRatios(io, tab.tab, splits).catch((e) => (ratioError = e));
-  return { tab, ids, ratioError };
+  return { tab, ids, terminals, ratioError };
 }
