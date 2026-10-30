@@ -22,10 +22,9 @@ import {
   effortsFor,
   paneArgv,
   validateConfig,
-  inFolder,
   layoutTree,
 } from "./lib.js";
-import { applyRatios } from "./ratios.js";
+import { buildTab, herdrDo } from "./build.js";
 import { isAgentPane, targetPane, restart } from "./restart.js";
 
 const dataDir = () => `${appHome()}/data/q-lab/q-saddle`;
@@ -50,24 +49,6 @@ const SAME = "same";
 const OPEN = "q-saddle.overlay";
 
 const nameOf = (entry) => entry.label ?? entry.name;
-
-async function herdrDo(command, args) {
-  const r = await exec("herdr-app", ["do", command, JSON.stringify(args)]);
-  const out = JSON.parse(r.stdout || "{}");
-  if (r.code !== 0 || out.error)
-    throw new Error(`${command}: ${out.error ?? r.stderr.trim()}`);
-  return out;
-}
-
-async function paneOf(terminal) {
-  const r = await exec("herdr-app", ["ls"]);
-  const panes = JSON.parse(r.stdout).spaces.flatMap((s) =>
-    s.tabs.flatMap((t) => t.terminals),
-  );
-  const pane = panes.find((p) => p.terminal === terminal)?.pane;
-  if (!pane) throw new Error(`no pane shows ${terminal}`);
-  return pane;
-}
 
 export default class Saddle extends View {
   init(_props, cx) {
@@ -343,46 +324,34 @@ export default class Saddle extends View {
         pick ? agentArgv(pick.agent, pick.option, pick.effort) : null,
       );
     };
-    const [root, ...rest] = this.layout.panes;
-    const rootArgv = argvOf(root);
-    const tab = project
-      ? await herdrDo("space.new", {
-          ...(props().name && { name: props().name }),
-          tab: this.label,
-          folder,
-          ...(rootArgv && { argv: rootArgv }),
-        })
-      : await herdrDo("tab.new", {
-          name: this.label,
-          space: here?.space,
-          folder,
-          ...(rootArgv && { argv: rootArgv }),
-        });
-    const ids = { [root.name]: await paneOf(tab.terminal) };
-    const splits = [];
-    let previous = root.name;
-    for (const pane of rest) {
-      const from = pane.split_from ?? previous;
-      const argv = folder ? inFolder(folder, argvOf(pane)) : argvOf(pane);
-      const made = await herdrDo("pane.split", {
-        direction: pane.direction,
-        pane: ids[from],
-        ...(argv && { argv }),
+    const { ids, ratioError } = await buildTab(io, {
+      panes: this.layout.panes,
+      folder,
+      argvOf,
+      ratios: this.config.apply_ratios !== false,
+      open: (argv) =>
+        project
+          ? herdrDo(exec, "space.new", {
+              ...(props().name && { name: props().name }),
+              tab: this.label,
+              folder,
+              ...(argv && { argv }),
+            })
+          : herdrDo(exec, "tab.new", {
+              name: this.label,
+              space: here?.space,
+              folder,
+              ...(argv && { argv }),
+            }),
+    });
+    if (ratioError) {
+      notify({
+        title: "Saddle: split ratios not applied",
+        body: ratioError.message,
+        level: "warning",
       });
-      ids[pane.name] = made.pane;
-      splits.push({ pane: made.pane, from: ids[from], ratio: pane.ratio });
-      previous = pane.name;
     }
-    if (splits.length && this.config.apply_ratios !== false) {
-      await applyRatios(io, tab.tab, splits).catch((e) =>
-        notify({
-          title: "Saddle: split ratios not applied",
-          body: e.message,
-          level: "warning",
-        }),
-      );
-    }
-    await herdrDo("pane.focus", { pane: ids[root.name] });
+    await herdrDo(exec, "pane.focus", { pane: ids[this.layout.panes[0].name] });
   }
 
   onKey(e, cx) {
