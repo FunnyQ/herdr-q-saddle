@@ -42,10 +42,12 @@ import {
   splitMatch,
   basename,
 } from "./projects.js";
+import { isP5, slab, keycap as p5Keycap } from "./p5.js";
 
 const OPEN = "q-saddle.project.overlay";
 const CACHE = "q-saddle.project.rows";
 const ROW_HEIGHT = 50;
+const SELECTED_EXTRA = 16;
 const HEADER_HEIGHT = 28;
 const LIST_HEIGHT = 420;
 // The spaces sidebar's palette for its theme color names, so a tile matches its space.
@@ -312,6 +314,7 @@ export default class Projects extends View {
 
   row(t, r, i, space, now) {
     const on = i === this.at;
+    const p5 = isP5();
     const meta = space
       ? v_flex()
           .flex_none()
@@ -341,14 +344,17 @@ export default class Projects extends View {
             .child(ago(r.used, now))
         : null;
     return h_flex()
-      .h(ROW_HEIGHT)
+      .h(on && p5 ? ROW_HEIGHT + SELECTED_EXTRA : ROW_HEIGHT)
       .px(10)
+      .when(on && p5, (el) => el.pl(24).pr(22).mr(8))
       .gap(12)
       .items_center()
       .rounded(8)
       .cursor_pointer()
-      .when(on, (el) => el.bg(t.selected))
-      .when(!on, (el) => el.hover((s) => s.bg(t.hover)))
+      .when(on && !p5, (el) => el.bg(t.selected))
+      .when(!on && !p5, (el) => el.hover((s) => s.bg(t.hover)))
+      .when(on && p5, (el) => slab(el).font_weight(800))
+      .when(p5, (el) => el.italic())
       .child(this.tile(t, r, space))
       .child(
         v_flex()
@@ -431,7 +437,11 @@ export default class Projects extends View {
         );
     const items = withHeaders(rows);
     const sizes = items.map((item) =>
-      item.header ? HEADER_HEIGHT : ROW_HEIGHT,
+      item.header
+        ? HEADER_HEIGHT
+        : item.row === this.at && isP5()
+          ? ROW_HEIGHT + SELECTED_EXTRA
+          : ROW_HEIGHT,
     );
     const height = Math.min(
       LIST_HEIGHT,
@@ -475,6 +485,8 @@ export default class Projects extends View {
   render() {
     const t = theme();
     const rows = this.rows();
+    const p5 = isP5();
+    const keycap = (k, l) => (p5 ? p5Keycap(k, l) : this.keycap(t, k, l));
     return v_flex()
       .id("q-saddle-project")
       .on_key_down((e, cx) => this.onKey(e, cx))
@@ -511,11 +523,10 @@ export default class Projects extends View {
         h_flex()
           .gap(14)
           .pt(12)
-          .border_t(1)
-          .border_color(t.border)
-          .child(this.keycap(t, "↑↓", "select"))
-          .child(this.keycap(t, "⏎", "open"))
-          .child(this.keycap(t, "esc", "close"))
+          .when(!p5, (el) => el.border_t(1).border_color(t.border))
+          .child(keycap("↑↓", "select"))
+          .child(keycap("⏎", "open"))
+          .child(keycap("esc", "close"))
           .child(div().flex_1())
           .child(
             div()
