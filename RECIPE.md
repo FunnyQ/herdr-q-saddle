@@ -8,6 +8,12 @@ Five keyboard dialogs for starting work. `cmd-t` asks for a tab layout, a harnes
 
 All three dialogs share one frame: theme `popover` background, 16px padding, 12px gaps, 13px text. A footer sits below a 1px `border` top line with 12px top padding and 14px gaps. It holds keycaps: an 18px-tall chip with 5px side padding, 4px radius, 1px `border`, `raised` fill and 10.5px `foreground` text, then an 11.5px `muted` label. Errors show as `blocked`-colored text in place of the list. List rows are 8px-radius, `selected` fill when chosen, `hover` fill under the pointer otherwise.
 
+**Persona 5 look.** While `shared("layout")` is `"persona5"`, all three dialogs switch style; every other layout keeps the look above.
+
+- The chosen row becomes a slab: a black skewed quad with a 2px white edge over a red `#e60012` copy offset 6px right, whose top swings between 1px and 8px every 1500ms. It is 16px taller, 24px left and 22px right padding (Projects and SSH also 8px right margin), 800 weight. The other rows lose the `hover` fill. Every row is italic.
+- Launcher titles become a tag: the same slab, 30px tall, the first letter at 23.2px and the rest at 16px, 900 weight italic white. Labels and the breadcrumb are uppercase. Unchosen labels are `#bdbdbd`, the chosen one white.
+- Keycaps become a skewed white chip with 800-weight black text, then an 11px uppercase 800-weight italic white label. The footer loses its top line.
+
 **Launcher** (`cmd-t`, `cmd-shift-c`, `cmd-r`; dialog 520px wide, title "Saddle")
 
 - Top: a 16px-tall breadcrumb at 11.5px of the picks so far (layout › harness › `Model · effort` › tab name), parts in `muted` split by a `dim` "›". Before any pick it reads "New tab" (or "Restart agent") in `dim`.
@@ -111,6 +117,7 @@ Five mods, all `"place": "none"`, opened only by keys (`keys.json`, `global` sec
   - `q-saddle.overlay`, `q-saddle.project.overlay` and `q-saddle.ssh.overlay` hold the open copy's overlay id.
   - `q-saddle.project.rows` and `q-saddle.ssh.state` are row caches.
   - Projects also reads `space.colors`, written by the shipped `spaces` sidebar.
+  - All three dialogs read `layout` to pick the Persona 5 look (`p5.js`, an identical copy in each mod folder).
 
 **`herdr` functions:** `exec`, `run`, `props`, `openOverlay`, `closeOverlay`, `notify`, `theme`, `focused`, `panes`, `terminals`, `spaces`, `knownAgents`, `readTextFile`, `writeTextFile` (with the expected old text), `shared`, `setShared`, `home`, `appHome`. Also `writeFile` from `fs/promises`, for the scratch file, and `readdir`, for one folder's kind. UI: `v_flex`, `h_flex`, `Input`/`InputState`, `v_virtual_list`, `VirtualListScrollHandle`, `Scrollbar` from `gpui-base`; `div`, `svg`, `image` from `gpui-kit`.
 
