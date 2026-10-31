@@ -26,6 +26,7 @@ import {
 } from "./lib.js";
 import { buildTab, herdrDo } from "./build.js";
 import { isAgentPane, targetPane, restart } from "./restart.js";
+import { isP5, slab, tag, keycap as p5Keycap } from "./p5.js";
 
 const dataDir = () => `${appHome()}/data/q-lab/q-saddle`;
 
@@ -510,16 +511,21 @@ export default class Saddle extends View {
     else if (r.glyph)
       lead = lead.child(div().text_size(14).text_color(t.muted).child(r.glyph));
     const missing = harness && this.programFor(r.value)?.installed === false;
+    const p5 = isP5();
+    const label = p5 ? r.label.toUpperCase() : r.label;
     return h_flex()
       .id(`row-${i}`)
-      .h(38)
+      .h(on && p5 ? 54 : 38)
       .px(10)
+      .when(on && p5, (el) => el.pl(24).pr(22))
       .gap(12)
       .items_center()
       .rounded(8)
       .cursor_pointer()
-      .when(on, (el) => el.bg(t.selected))
-      .when(!on, (el) => el.hover((s) => s.bg(t.hover)))
+      .when(on && !p5, (el) => el.bg(t.selected))
+      .when(!on && !p5, (el) => el.hover((s) => s.bg(t.hover)))
+      .when(on && p5, (el) => slab(el).font_weight(800))
+      .when(p5, (el) => el.italic())
       .on_click((_e, cx) => {
         this.at = i;
         this.choose(cx);
@@ -529,8 +535,10 @@ export default class Saddle extends View {
         div()
           .flex_1()
           .truncate()
-          .text_color(missing ? t.dim : t.foreground)
-          .child(r.label),
+          .text_color(
+            missing ? t.dim : p5 ? (on ? "#ffffff" : "#bdbdbd") : t.foreground,
+          )
+          .child(label),
       )
       .when(missing, (el) =>
         el.child(div().text_size(11).text_color(t.dim).child("not installed")),
@@ -585,6 +593,11 @@ export default class Saddle extends View {
     }
     if (kind === "text") keys.push(["⏎", "open"]);
     if (kind !== "launching") keys.push(["esc", "close"]);
+    if (isP5())
+      return h_flex()
+        .gap(14)
+        .pt(12)
+        .children(keys.map(([k, l]) => p5Keycap(k, l)));
     return h_flex()
       .gap(14)
       .pt(12)
@@ -642,6 +655,7 @@ export default class Saddle extends View {
     const title = this.errors.length
       ? "Saddle"
       : (this.step?.title ?? "Loading…");
+    const p5 = isP5();
     return v_flex()
       .id("q-saddle-tab")
       .track_focus(this.handle)
@@ -659,24 +673,35 @@ export default class Saddle extends View {
               .h(16)
               .gap(6)
               .text_size(11.5)
+              .when(p5, (el) => el.italic().font_weight(800))
               .when(!trail.length, (el) =>
                 el
                   .text_color(t.dim)
-                  .child(props()?.restart ? "Restart agent" : "New tab"),
+                  .child(
+                    p5
+                      ? (props()?.restart ? "Restart agent" : "New tab").toUpperCase()
+                      : props()?.restart
+                        ? "Restart agent"
+                        : "New tab",
+                  ),
               )
               .children(
                 trail.flatMap((part, i) => [
                   ...(i ? [div().text_color(t.dim).child("›")] : []),
-                  div().text_color(t.muted).child(part),
+                  div()
+                    .text_color(t.muted)
+                    .child(p5 ? part.toUpperCase() : part),
                 ]),
               ),
           )
           .child(
-            div()
-              .text_size(16)
-              .font_semibold()
-              .text_color(t.foreground)
-              .child(title),
+            p5
+              ? tag(title)
+              : div()
+                  .text_size(16)
+                  .font_semibold()
+                  .text_color(t.foreground)
+                  .child(title),
           ),
       )
       .child(this.body(t))
