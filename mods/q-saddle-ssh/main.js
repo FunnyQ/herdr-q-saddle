@@ -42,10 +42,12 @@ import {
   validRegistry,
   closingTab,
 } from "./ssh.js";
+import { isP5, slab, keycap as p5Keycap } from "./p5.js";
 
 const OPEN = "q-saddle.ssh.overlay";
 const CACHE = "q-saddle.ssh.state";
 const ROW_HEIGHT = 46;
+const SELECTED_EXTRA = 16;
 const LIST_HEIGHT = 414;
 const SSH_ICON = "\u{f08a9}";
 const LABELS = {
@@ -354,16 +356,20 @@ export default class Ssh extends View {
 
   row(t, r, i, at) {
     const on = i === this.at;
+    const p5 = isP5();
     const [name, ...aliases] = r.aliases;
     return h_flex()
-      .h(ROW_HEIGHT)
+      .h(on && p5 ? ROW_HEIGHT + SELECTED_EXTRA : ROW_HEIGHT)
       .px(10)
+      .when(on && p5, (el) => el.pl(24).pr(22).mr(8))
       .gap(12)
       .items_center()
       .rounded(8)
       .cursor_pointer()
-      .when(on, (el) => el.bg(t.selected))
-      .when(!on, (el) => el.hover((s) => s.bg(t.hover)))
+      .when(on && !p5, (el) => el.bg(t.selected))
+      .when(!on && !p5, (el) => el.hover((s) => s.bg(t.hover)))
+      .when(on && p5, (el) => slab(el).font_weight(800))
+      .when(p5, (el) => el.italic())
       .child(this.tile(t, r))
       .child(
         v_flex()
@@ -437,7 +443,9 @@ export default class Ssh extends View {
             .text_color(t.muted)
             .child(this.targets ? "No SSH target matches" : "Loading…"),
         );
-    const sizes = rows.map(() => ROW_HEIGHT);
+    const sizes = rows.map((_, i) =>
+      i === this.at && isP5() ? ROW_HEIGHT + SELECTED_EXTRA : ROW_HEIGHT,
+    );
     const at = now();
     return v_flex()
       .relative()
@@ -498,6 +506,7 @@ export default class Ssh extends View {
     const t = theme();
     const rows = this.form ? [] : this.rows();
     const preview = this.form && !FIELDS[this.form.step];
+    const p5 = isP5();
     const keys = this.form
       ? [
           ["⏎", preview ? "add" : "next"],
@@ -551,9 +560,12 @@ export default class Ssh extends View {
         h_flex()
           .gap(14)
           .pt(12)
-          .border_t(1)
-          .border_color(t.border)
-          .children(keys.map(([k, l]) => this.keycap(t, k, l)))
+          .when(!p5, (el) => el.border_t(1).border_color(t.border))
+          .children(
+            keys.map(([k, l]) =>
+              p5 ? p5Keycap(k, l) : this.keycap(t, k, l),
+            ),
+          )
           .child(div().flex_1())
           .child(
             div()
