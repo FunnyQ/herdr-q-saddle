@@ -104,7 +104,7 @@ test("paneArgv wraps env and runs commands through sh", () => {
       { type: "command", command: "yazi .", env: { Q_NO_BANNER: "1" } },
       null,
     ),
-    ["env", "Q_NO_BANNER=1", "sh", "-c", 'yazi .; exec "${SHELL:-/bin/sh}"'],
+    ["env", "Q_NO_BANNER=1", "sh", "-c", 'set -m; yazi .; exec "${SHELL:-/bin/sh}"'],
   );
   assert.deepEqual(paneArgv({ type: "agent" }, ["claude"]), ["claude"]);
   assert.equal(paneArgv({ type: "shell", env: { A: "1" } }, null), null);

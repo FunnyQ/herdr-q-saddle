@@ -140,7 +140,7 @@ Five mods, all `"place": "none"`, opened only by keys (`keys.json`, `global` sec
 
 1. `hc get <old> --json` gives `argv`, `foreground.argv` and `foreground.cwd`.
 2. Build the new launch:
-   - Same setup: the old `argv` when it has more than one word, else `sh -c '"$@"; exec "${SHELL:-/bin/sh}"' sh <foreground.argv>`.
+   - Same setup: the old `argv` when it has more than one word, else `sh -c 'set -m; "$@"; exec "${SHELL:-/bin/sh}"' sh <foreground.argv>`.
    - A new harness: the same handover around any `env K=V` pairs from the old argv plus the new launch, wrapped in a `cd` to the folder.
 3. `hc run --bg --no-parent --json --cwd <folder> -- <argv>` starts the new terminal and prints its `address`.
 4. `doc.set` rewrites the pane node whose `content.terminal` is the old address to the new one.
@@ -150,7 +150,7 @@ Five mods, all `"place": "none"`, opened only by keys (`keys.json`, `global` sec
 
 **Pane argv**
 
-- Command pane: `sh -c '<command>; exec "${SHELL:-/bin/sh}"'`, so a shell takes over when the command ends.
+- Command pane: `sh -c 'set -m; <command>; exec "${SHELL:-/bin/sh}"'`, so a shell takes over when the command ends. `set -m` gives the command its own foreground process group, so Herdr names the pane after it, not `sh`.
 - Shell pane: no argv.
 - `env` goes in front as `env K=V …`.
 - Every split argv is wrapped as `sh -c 'cd "$1" || exit; shift; [ $# -gt 0 ] || set -- "${SHELL:-/bin/sh}"; exec "$@"' sh <folder> <argv…>`.

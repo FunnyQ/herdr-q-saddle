@@ -20,7 +20,7 @@ const CODEX_ARGV = [
   "--model",
   "gpt-6.1-sol",
 ];
-const HANDOVER = ["sh", "-c", '"$@"; exec "${SHELL:-/bin/sh}"', "sh"];
+const HANDOVER = ["sh", "-c", 'set -m; "$@"; exec "${SHELL:-/bin/sh}"', "sh"];
 
 const pane = (id, tab, terminal, agent) => ({
   pane: id,

@@ -32,7 +32,7 @@ export function paneArgv(pane, agentLaunch) {
     pane.type === "agent"
       ? agentLaunch
       : pane.type === "command"
-        ? ["sh", "-c", `${pane.command}; exec "\${SHELL:-/bin/sh}"`]
+        ? ["sh", "-c", `set -m; ${pane.command}; exec "\${SHELL:-/bin/sh}"`]
         : null;
   const env = Object.entries(pane.env ?? {}).map(([k, v]) => `${k}=${v}`);
   return argv && env.length ? ["env", ...env, ...argv] : argv;

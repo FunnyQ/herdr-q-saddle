@@ -18,7 +18,7 @@ export function targetPane(panes, focused, isAgent) {
   return agents.find((p) => p.pane === focused.pane) ?? agents[0] ?? null;
 }
 
-const HANDOVER = ["sh", "-c", '"$@"; exec "${SHELL:-/bin/sh}"', "sh"];
+const HANDOVER = ["sh", "-c", 'set -m; "$@"; exec "${SHELL:-/bin/sh}"', "sh"];
 
 function envOf(argv) {
   const at = argv.indexOf("env");

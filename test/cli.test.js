@@ -121,7 +121,7 @@ test("opens the default layout in a new space and reports its ids", async () => 
       argv: inFolder("/p/app", [
         "sh",
         "-c",
-        'yazi .; exec "${SHELL:-/bin/sh}"',
+        'set -m; yazi .; exec "${SHELL:-/bin/sh}"',
       ]),
     },
     { direction: "down", pane: "p2", argv: inFolder("/p/app", null) },
