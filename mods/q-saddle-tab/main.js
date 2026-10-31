@@ -218,8 +218,9 @@ export default class Saddle extends View {
     cx.notify();
     cx.spawn(async (cx) => {
       try {
-        await this.launch();
+        const pane = await this.launch();
         this.dismiss();
+        if (pane) run("pane.focus", { pane });
       } catch (e) {
         this.errors = [e.message];
         cx.notify();
@@ -352,7 +353,9 @@ export default class Saddle extends View {
         level: "warning",
       });
     }
-    await herdrDo(exec, "pane.focus", { pane: ids[this.layout.panes[0].name] });
+    const agent =
+      this.layout.panes.find((p) => p.type === "agent") ?? this.layout.panes[0];
+    return ids[agent.name];
   }
 
   onKey(e, cx) {
@@ -679,7 +682,10 @@ export default class Saddle extends View {
                   .text_color(t.dim)
                   .child(
                     p5
-                      ? (props()?.restart ? "Restart agent" : "New tab").toUpperCase()
+                      ? (props()?.restart
+                          ? "Restart agent"
+                          : "New tab"
+                        ).toUpperCase()
                       : props()?.restart
                         ? "Restart agent"
                         : "New tab",
