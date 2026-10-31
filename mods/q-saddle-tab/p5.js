@@ -42,21 +42,33 @@ export const slab = (el, id = "p5-slab-shadow") =>
     .child(paint(SLAB_FILL, "#000000").inset_0())
     .child(paint(SLAB_EDGE, "#ffffff").inset_0());
 
-export const tag = (label) =>
-  slab(h_flex().h(30).pl(12).pr(24).items_center().self_start(), "p5-tag-shadow").child(
-    h_flex()
-      .items_end()
-      .italic()
-      .font_weight(900)
-      .text_color("#ffffff")
-      .child(
-        div()
-          .text_size(16 * 1.45)
-          .line_height(1)
-          .child(label[0]),
-      )
-      .child(div().text_size(16).line_height(1.1).child(label.slice(1))),
-  );
+export const tag = (title) => {
+  const label = title.toUpperCase();
+  return h_flex()
+    .relative()
+    .h(30)
+    .pl(12)
+    .pr(24)
+    .items_center()
+    .self_start()
+    .child(paint(SLAB_FILL, "#e60012").top(4).left(6).right(-6).bottom(-4))
+    .child(paint(SLAB_FILL, "#000000").inset_0())
+    .child(paint(SLAB_EDGE, "#ffffff").inset_0())
+    .child(
+      h_flex()
+        .items_end()
+        .italic()
+        .font_weight(900)
+        .text_color("#ffffff")
+        .child(
+          div()
+            .text_size(16 * 1.45)
+            .line_height(1)
+            .child(label[0]),
+        )
+        .child(div().text_size(16).line_height(1.1).child(label.slice(1))),
+    );
+};
 
 export const keycap = (key, label) =>
   h_flex()
