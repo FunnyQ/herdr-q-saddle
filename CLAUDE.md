@@ -52,7 +52,7 @@ Out of v1: worktree launcher (built-in `worktree` mod covers it), personal assis
 - Mod JS (QuickJS) shares the window's thread. A `readdir` walk of `~/Projects` froze the whole window for seconds; run one `exec("find", ...)` instead, which works in another process.
 - Closing an overlay hands keyboard focus back. To chain overlays, close the current one first, then open the next.
 - `readTextFile` is slow while a dialog opens (~0.5 s for two files); `shared()` is synchronous, so the picker draws its last rows from `shared("q-saddle.project.rows")` before reading anything.
-- `.spin()` inside a `v_virtual_list` row made the window unresponsive. The likely cause is the list re-running its JS renderer every frame. This was not isolated, because Herdr crashed and restarted between tries. Use static marks in virtual lists.
+- `.spin()` inside a `v_virtual_list` row made the window unresponsive. The likely cause is the list re-running its JS renderer every frame. This was not isolated, because Herdr crashed and restarted between tries. Use static marks in virtual lists. A `.loop("top", …)` on one absolute child of the chosen row (`slab` in `p5.js`) did not freeze it (2026-10-31).
 - `herdr-app check` panics (`window.rs:5226`, `Option::unwrap()` on `None`) when a `v_virtual_list` has items, even plain-text ones; the app itself renders it. `q-saddle-project` passes check only when the shared row cache is empty.
 
 ## Restart findings (2026-10-30)

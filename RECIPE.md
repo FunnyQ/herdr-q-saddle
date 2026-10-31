@@ -190,7 +190,7 @@ Five mods, all `"place": "none"`, opened only by keys (`keys.json`, `global` sec
 - Closing the launcher cancels its tasks. Ignore `esc` while it opens, or you get a half-built tab.
 - Mod JS shares the window's thread. A `readdir` walk of `~/Projects` froze the window for seconds; run one `exec("find", …)`. Resolve SSH hosts in one `sh` loop, not one `exec` per host.
 - `readTextFile` is slow while a dialog opens (about 0.5s for two files). `shared()` is synchronous, so draw the last rows from the cache first. `setShared` re-renders every mod, so write the cache only when it changed.
-- No `.spin()` or other animation inside a `v_virtual_list` row: it made the window unresponsive. Use static marks.
+- No `.spin()` inside a `v_virtual_list` row: it made the window unresponsive. A `.loop()` on the chosen row's absolute shadow (the Persona 5 slab) stayed responsive under held `↑↓`.
 - `herdr-app check` panics (`Option::unwrap()` on `None`) when a `v_virtual_list` has items, even plain text, though the app renders it fine. `q-saddle-project` passes check only while `q-saddle.project.rows` is empty.
 - `writeTextFile` can write outside `~/.config/herdr-app` (the registries and the SSH config); `fs/promises` cannot. It replaces the whole file, and reads stop at 1 MiB. Append to shell history with `sh -c 'printf … >>'`.
 - Avoid `alt-letter` defaults: option+letter types characters on many Mac keyboards. Avoid ctrl keys that keyboard remappers commonly take over (emacs-style `ctrl-a/b/d/e/f/h/k/n/p`); `ctrl-i` arrives as `tab`.
