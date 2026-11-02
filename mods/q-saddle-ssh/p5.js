@@ -1,6 +1,6 @@
 // Persona 5 look, used only while the persona5 layout is shown.
 // Mods cannot import across folders, so each q-saddle mod keeps an identical copy.
-import { div, PathBuilder } from "gpui-kit";
+import { View, div, PathBuilder } from "gpui-kit";
 import { h_flex } from "gpui-base";
 import { shared } from "herdr";
 
@@ -25,22 +25,70 @@ const CHIP = PathBuilder.fill()
 const paint = (path, color) =>
   globalThis.window.paint_path(path, color).absolute();
 
-export const slab = (el, id = "p5-slab-shadow") =>
+const MORPH_STEP = 300;
+// Step motion: a new pose every MORPH_STEP ms, no in-between. Each corner's pull is a hash of the pose number.
+const pull = (now, i) => {
+  const s =
+    Math.sin((Math.floor(now / MORPH_STEP) * 8 + i) * 127.1 + 311.7) *
+    43758.5453;
+  return s - Math.floor(s);
+};
+const morphed = (now) => [
+  [`${2 * pull(now, 0)}%`, `${14 + 8 * pull(now, 1)}%`],
+  [`${97 - 2 * pull(now, 2)}%`, `${8 * pull(now, 3)}%`],
+  [`${100 - 2 * pull(now, 4)}%`, `${84 - 8 * pull(now, 5)}%`],
+  [`${4 + 2 * pull(now, 6)}%`, `${100 - 8 * pull(now, 7)}%`],
+];
+
+class Morph extends View {
+  init(props, cx) {
+    this.fill = props.fill;
+    this.edge = props.edge;
+    this.lag = props.lag;
+    cx.timer.every(MORPH_STEP, (cx) => {
+      if (shared("p5.motion") !== false || !this.still) cx.notify();
+    });
+  }
+
+  render() {
+    this.still = shared("p5.motion") === false;
+    const shape = morphed(this.still ? 0 : Date.now() - this.lag);
+    return div()
+      .size_full()
+      .relative()
+      .child(
+        paint(
+          PathBuilder.fill().add_polygon(shape).build(),
+          this.fill,
+        ).inset_0(),
+      )
+      .when(Boolean(this.edge), (el) =>
+        el.child(
+          paint(
+            PathBuilder.stroke(2).add_polygon(shape, true).build(),
+            this.edge,
+          ).inset_0(),
+        ),
+      );
+  }
+}
+
+export const slabViews = (cx) => ({
+  body: cx.new(Morph, { fill: "#000000", edge: "#ffffff", lag: 0 }),
+  shadow: cx.new(Morph, {
+    fill: "#e60012",
+    edge: null,
+    lag: MORPH_STEP * 6,
+  }),
+});
+
+export const slab = (el, views) =>
   el
     .relative()
     .child(
-      div()
-        .id(id)
-        .absolute()
-        .top(4)
-        .left(6)
-        .w_full()
-        .h_full()
-        .loop("top", { from: 1, to: 8, period: 1500 })
-        .child(paint(SLAB_FILL, "#e60012").inset_0()),
+      div().absolute().top(4).left(6).w_full().h_full().child(views.shadow),
     )
-    .child(paint(SLAB_FILL, "#000000").inset_0())
-    .child(paint(SLAB_EDGE, "#ffffff").inset_0());
+    .child(div().absolute().inset_0().child(views.body));
 
 export const tag = (title) => {
   const label = title.toUpperCase();

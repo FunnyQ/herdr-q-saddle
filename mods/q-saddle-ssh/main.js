@@ -42,7 +42,7 @@ import {
   validRegistry,
   closingTab,
 } from "./ssh.js";
-import { isP5, slab, keycap as p5Keycap } from "./p5.js";
+import { isP5, slab, slabViews, keycap as p5Keycap } from "./p5.js";
 
 const OPEN = "q-saddle.ssh.overlay";
 const CACHE = "q-saddle.ssh.state";
@@ -81,6 +81,7 @@ function parseRegistry(text) {
 
 export default class Ssh extends View {
   init(_props, cx) {
+    this.slabViews = slabViews(cx);
     // mod.open stacks a new copy per key press: keep only the newest.
     const mine = props()?.overlay;
     const previous = shared(OPEN);
@@ -368,7 +369,7 @@ export default class Ssh extends View {
       .cursor_pointer()
       .when(on && !p5, (el) => el.bg(t.selected))
       .when(!on && !p5, (el) => el.hover((s) => s.bg(t.hover)))
-      .when(on && p5, (el) => slab(el).font_weight(800))
+      .when(on && p5, (el) => slab(el, this.slabViews).font_weight(800))
       .when(p5, (el) => el.italic())
       .child(this.tile(t, r))
       .child(
