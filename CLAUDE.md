@@ -8,19 +8,20 @@ The mod API is documented in `~/.config/herdr-app/AGENTS.md`, `herdr.d.ts`, and 
 
 ## Layout
 
-`mods/q-saddle-tab/` (layout launcher), `mods/q-saddle-agent/`, `mods/q-saddle-project/` (project picker), `mods/q-saddle-restart/` (reopens `q-saddle-tab` in restart mode), and `mods/q-saddle-ssh/` (SSH picker) are the mod folders that get copied into `~/.config/herdr-app/mods/`. The repo root also holds `README.md`, `config.example.json`, and `RECIPE.md`, `preview.png`, and `keys.json`, which herdr.dev requires for sharing (see "Layouts and mods other people made" in `AGENTS.md`).
+`mods/q-saddle-tab/` (layout launcher), `mods/q-saddle-agent/`, `mods/q-saddle-project/` (project picker), `mods/q-saddle-restart/` (reopens `q-saddle-tab` in restart mode), `mods/q-saddle-ssh/` (SSH picker), `mods/q-saddle-quick/` (quick terminal, also the frame its dialog draws), and `mods/q-saddle-quick-adopt/` (reopens `q-saddle-quick` in adopt mode) are the mod folders that get copied into `~/.config/herdr-app/mods/`. The repo root also holds `README.md`, `config.example.json`, and `RECIPE.md`, `preview.png`, and `keys.json`, which herdr.dev requires for sharing (see "Layouts and mods other people made" in `AGENTS.md`).
 
 ## Scope
 
 Personal paths and agents live in config, not code.
 
-| Feature         | Key           | Notes                                                                                                           |
-| --------------- | ------------- | --------------------------------------------------------------------------------------------------------------- |
-| Layout launcher | `cmd-t`       | Pick harness + model, open a tab from a `tab_layouts` entry, then apply each pane's `ratio` via `doc.set`.      |
-| Project picker  | `cmd-o`       | Registry + `~/Projects` sweep; focus the existing space or `space.new`.                                         |
-| Project review  | not built     | Scan and curate the project registry.                                                                           |
-| SSH picker      | `cmd-shift-s` | Pick a target, open a tab running `ssh`. Not `hc machine`: that is for devices running hc, not plain SSH hosts. |
-| Restart agent   | `cmd-r`       | In place, keeping side panes. Swap a replacement terminal into the pane (see spike findings).                   |
+| Feature         | Key           | Notes                                                                                                                    |
+| --------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Layout launcher | `cmd-t`       | Pick harness + model, open a tab from a `tab_layouts` entry, then apply each pane's `ratio` via `doc.set`.               |
+| Project picker  | `cmd-o`       | Registry + `~/Projects` sweep; focus the existing space or `space.new`.                                                  |
+| Project review  | not built     | Scan and curate the project registry.                                                                                    |
+| SSH picker      | `cmd-shift-s` | Pick a target, open a tab running `ssh`. Not `hc machine`: that is for devices running hc, not plain SSH hosts.          |
+| Quick terminal  | `` ctrl-` ``  | One-shot runner toggles a per-space parked shell in a dialog; the dialog's header closes it on a space or layout change. |
+| Restart agent   | `cmd-r`       | In place, keeping side panes. Swap a replacement terminal into the pane (see spike findings).                            |
 
 Out of v1: worktree launcher (built-in `worktree` mod covers it), personal assistant, dashboard, fork agent, even out panes.
 
@@ -45,7 +46,7 @@ Out of v1: worktree launcher (built-in `worktree` mod covers it), personal assis
 - `mod.open` passes no props, and a mod cannot import another mod folder's files (`resolves outside the application directory`). `mods/q-saddle-agent/` only reopens `q-saddle-tab` with `openOverlay({props: {direct: true}})`.
 - `pane.split` returns `{pane, terminal}`.
 - `build.js` builds a layout for both the overlay and `cli.js open` (a plain-`node` CLI that cc-plugins' `herd tell` calls). Change the layout logic there, not in either caller.
-- Run `npm test` (node --test) for `lib.js`, `ratios.js`, `build.js`, `cli.js`, `projects.js`, `restart.js`, and `ssh.js`; they import nothing from `herdr`.
+- Run `npm test` (node --test) for `lib.js`, `ratios.js`, `build.js`, `cli.js`, `projects.js`, `restart.js`, `ssh.js`, and `quick.js`; they import nothing from `herdr`.
 
 ## Picker findings (2026-10-30)
 
@@ -70,3 +71,7 @@ Out of v1: worktree launcher (built-in `worktree` mod covers it), personal assis
 - `writeTextFile` writes outside `~/.config/herdr-app` (verified for the SSH registry in `~/.local/state`); only `fs/promises` is limited to it. Appending to `~/.zsh_history` goes through `exec("sh", ...)`, because `writeTextFile` replaces the whole file and reads stop at 1 MiB.
 - Keyboard remappers with Emacs-style ctrl bindings (a common Karabiner rule) turn ctrl+`a b d e f h i k m n p v [ ]` into other keys. ctrl-i arrives as `tab`. Pick ctrl keys outside that list (`ctrl-s` edits, `ctrl-x` removes).
 - A long-running Herdr slowed every host call while an overlay was open: two `readTextFile` calls took 1.6–2.7 s, the first keystroke landed after 2 s, with only 24 renders. A Herdr restart fixed it. Restart Herdr before you profile a slow overlay.
+
+## Quick terminal findings (2026-11-02)
+
+- `setShared(key, null)` and `setShared(key, undefined)` both keep the key in `shared.json` as `null`. No mod API deletes a key; edit `shared.json` only while Herdr is closed.

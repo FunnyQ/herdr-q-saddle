@@ -4,6 +4,8 @@
     "cmd-shift-c": "mod.open:q-saddle-agent",
     "cmd-o": "mod.open:q-saddle-project",
     "cmd-r": "mod.open:q-saddle-restart",
-    "cmd-shift-s": "mod.open:q-saddle-ssh"
+    "cmd-shift-s": "mod.open:q-saddle-ssh",
+    "ctrl-`": "mod.open:q-saddle-quick",
+    "ctrl-shift-`": "mod.open:q-saddle-quick-adopt"
   }
 }
