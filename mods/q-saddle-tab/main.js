@@ -26,7 +26,7 @@ import {
 } from "./lib.js";
 import { buildTab, herdrDo } from "./build.js";
 import { isAgentPane, targetPane, restart } from "./restart.js";
-import { isP5, slab, slabViews, tag, keycap as p5Keycap } from "./p5.js";
+import { isP5, Morph, slab, tag, keycap as p5Keycap } from "./p5.js";
 
 const dataDir = () => `${appHome()}/data/q-lab/q-saddle`;
 
@@ -53,7 +53,7 @@ const nameOf = (entry) => entry.label ?? entry.name;
 
 export default class Saddle extends View {
   init(_props, cx) {
-    this.slabViews = slabViews(cx);
+    this.morph = cx.new(Morph, {});
     // mod.open stacks a new copy per key press: keep only the newest.
     const mine = props()?.overlay;
     const previous = shared(OPEN);
@@ -528,7 +528,7 @@ export default class Saddle extends View {
       .cursor_pointer()
       .when(on && !p5, (el) => el.bg(t.selected))
       .when(!on && !p5, (el) => el.hover((s) => s.bg(t.hover)))
-      .when(on && p5, (el) => slab(el, this.slabViews).font_weight(800))
+      .when(on && p5, (el) => slab(el, this.morph).font_weight(800))
       .when(p5, (el) => el.italic())
       .on_click((_e, cx) => {
         this.at = i;

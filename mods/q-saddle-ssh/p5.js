@@ -40,11 +40,14 @@ const morphed = (now) => [
   [`${4 + 2 * pull(now, 6)}%`, `${100 - 8 * pull(now, 7)}%`],
 ];
 
-class Morph extends View {
-  init(props, cx) {
-    this.fill = props.fill;
-    this.edge = props.edge;
-    this.lag = props.lag;
+// The selected slab: black with a white edge, a magenta and a cyan shadow lagging behind it.
+const SHADOWS = [
+  { color: "#ff1a8cb3", lag: 6, x: 10, y: 6 },
+  { color: "#00e5ffb3", lag: 3, x: -8, y: -5 },
+];
+
+export class Morph extends View {
+  init(_props, cx) {
     cx.timer.every(MORPH_STEP, (cx) => {
       if (shared("p5.motion") !== false || !this.still) cx.notify();
     });
@@ -52,43 +55,37 @@ class Morph extends View {
 
   render() {
     this.still = shared("p5.motion") === false;
-    const shape = morphed(this.still ? 0 : Date.now() - this.lag);
+    const now = this.still ? 0 : Date.now();
+    const shape = morphed(now);
+    const fill = (shape, color) =>
+      paint(PathBuilder.fill().add_polygon(shape).build(), color).inset_0();
     return div()
       .size_full()
       .relative()
+      .children(
+        SHADOWS.map((s) =>
+          div()
+            .absolute()
+            .left(s.x)
+            .top(s.y)
+            .size_full()
+            .child(
+              fill(morphed(this.still ? 0 : now - MORPH_STEP * s.lag), s.color),
+            ),
+        ),
+      )
+      .child(fill(shape, "#000000"))
       .child(
         paint(
-          PathBuilder.fill().add_polygon(shape).build(),
-          this.fill,
+          PathBuilder.stroke(2).add_polygon(shape, true).build(),
+          "#ffffff",
         ).inset_0(),
-      )
-      .when(Boolean(this.edge), (el) =>
-        el.child(
-          paint(
-            PathBuilder.stroke(2).add_polygon(shape, true).build(),
-            this.edge,
-          ).inset_0(),
-        ),
       );
   }
 }
 
-export const slabViews = (cx) => ({
-  body: cx.new(Morph, { fill: "#000000", edge: "#ffffff", lag: 0 }),
-  shadow: cx.new(Morph, {
-    fill: "#e60012",
-    edge: null,
-    lag: MORPH_STEP * 6,
-  }),
-});
-
-export const slab = (el, views) =>
-  el
-    .relative()
-    .child(
-      div().absolute().top(4).left(6).w_full().h_full().child(views.shadow),
-    )
-    .child(div().absolute().inset_0().child(views.body));
+export const slab = (el, morph) =>
+  el.relative().child(div().absolute().inset_0().child(morph));
 
 export const tag = (title) => {
   const label = title.toUpperCase();
