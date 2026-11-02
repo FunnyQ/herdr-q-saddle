@@ -12,8 +12,7 @@
           "command": "yazi .",
           "direction": "right",
           "ratio": 0.62
-        },
-        { "name": "term", "type": "shell", "direction": "down", "ratio": 0.1 }
+        }
       ]
     },
     {
