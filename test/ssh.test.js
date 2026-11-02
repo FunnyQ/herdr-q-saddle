@@ -10,6 +10,7 @@ import {
   applyRemove,
   pickerRows,
   matches,
+  splitMatch,
   fieldError,
   closingTab,
   aliasTaken,
@@ -250,6 +251,41 @@ test("matches checks aliases and address, case-insensitively", () => {
   assert.equal(matches(row, "ALT"), true);
   assert.equal(matches(row, "web.example"), true);
   assert.equal(matches(row, "nope"), false);
+});
+
+test("matches takes each word as letters in order within one field", () => {
+  const row = {
+    key: "web",
+    aliases: ["web", "web-alt"],
+    address: "deploy@web.example",
+  };
+  assert.equal(matches(row, "webalt"), true);
+  assert.equal(matches(row, "dply wbex"), true);
+  assert.equal(matches(row, "altweb"), false);
+});
+
+test("splitMatch marks each query letter it finds in order, ignoring case", () => {
+  assert.deepEqual(splitMatch("deploy@web.example", "dply WBEX"), [
+    ["d", true],
+    ["e", false],
+    ["pl", true],
+    ["o", false],
+    ["y", true],
+    ["@", false],
+    ["w", true],
+    ["e", false],
+    ["b", true],
+    [".", false],
+    ["ex", true],
+    ["ample", false],
+  ]);
+  assert.deepEqual(splitMatch("ops@web.example", "web"), [
+    ["ops@", false],
+    ["web", true],
+    [".example", false],
+  ]);
+  assert.equal(splitMatch("web", "zzz"), null);
+  assert.equal(splitMatch("web", ""), null);
 });
 
 test("fieldError rejects every bad field", () => {

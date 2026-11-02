@@ -165,12 +165,41 @@ export function pickerRows(targets, query) {
   return rows;
 }
 
+const lettersAt = (text, word) => {
+  const lower = text.toLowerCase();
+  const run = lower.indexOf(word);
+  if (run >= 0) return [...word].map((_, i) => run + i);
+  const at = [];
+  for (const c of word) {
+    const i = lower.indexOf(c, (at.at(-1) ?? -1) + 1);
+    if (i < 0) return null;
+    at.push(i);
+  }
+  return at;
+};
+
+const fuzzy = (fields, query) =>
+  words(query.toLowerCase()).every((w) => fields.some((f) => lettersAt(f, w)));
+
+export function splitMatch(text, query) {
+  const hit = new Set();
+  for (const w of words(query.toLowerCase())) {
+    const at = lettersAt(text, w);
+    if (!at) return null;
+    for (const i of at) hit.add(i);
+  }
+  if (!hit.size) return null;
+  const parts = [];
+  for (const [i, c] of text.split("").entries()) {
+    const last = parts.at(-1);
+    if (last?.[1] === hit.has(i)) last[0] += c;
+    else parts.push([c, hit.has(i)]);
+  }
+  return parts;
+}
+
 export function matches(row, query) {
-  const q = query.trim().toLowerCase();
-  return (
-    !q ||
-    [...row.aliases, row.address ?? ""].some((s) => s.toLowerCase().includes(q))
-  );
+  return fuzzy([...row.aliases, row.address ?? ""], query);
 }
 
 const validName = (s) => /^[A-Za-z0-9_.-]+$/.test(s);

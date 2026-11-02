@@ -32,6 +32,7 @@ import {
   applyUse,
   applyRemove,
   pickerRows,
+  splitMatch,
   FIELDS,
   fieldError,
   aliasTaken,
@@ -160,7 +161,11 @@ export default class Ssh extends View {
       const found = await exec("grep", ["-a", "ssh ", this.historyFile]);
       history = historyTargets(found.stdout);
     }
-    return syncTargets(registry, parseResolved(resolved.stdout, groups), history);
+    return syncTargets(
+      registry,
+      parseResolved(resolved.stdout, groups),
+      history,
+    );
   }
 
   async save(targets) {
@@ -355,6 +360,16 @@ export default class Ssh extends View {
     );
   }
 
+  marked(t, el, text) {
+    const parts = splitMatch(text, this.query);
+    if (!parts) return el.child(text);
+    return el.children(
+      parts.map(([s, hit]) =>
+        hit ? div().text_color(t.accent).font_semibold().child(s) : s,
+      ),
+    );
+  }
+
   row(t, r, i, at) {
     const on = i === this.at;
     const p5 = isP5();
@@ -381,23 +396,39 @@ export default class Ssh extends View {
             h_flex()
               .gap(6)
               .items_baseline()
-              .child(div().flex_none().text_color(t.foreground).child(name))
+              .child(
+                this.marked(
+                  t,
+                  h_flex().flex_none().text_color(t.foreground),
+                  name,
+                ),
+              )
               .children(
                 aliases.map((a) =>
-                  div().flex_none().text_size(11.5).text_color(t.dim).child(a),
+                  this.marked(
+                    t,
+                    h_flex().flex_none().text_size(11.5).text_color(t.dim),
+                    a,
+                  ),
                 ),
               ),
           )
           .child(
-            div()
-              .truncate()
-              .text_size(11.5)
-              .text_color(t.dim)
-              .child(
-                r.source === "new"
-                  ? "connect as typed"
-                  : (r.address ?? "manual"),
-              ),
+            r.address && r.source !== "new"
+              ? this.marked(
+                  t,
+                  h_flex()
+                    .min_w(0)
+                    .overflow_hidden()
+                    .text_size(11.5)
+                    .text_color(t.dim),
+                  r.address,
+                )
+              : div()
+                  .truncate()
+                  .text_size(11.5)
+                  .text_color(t.dim)
+                  .child(r.source === "new" ? "connect as typed" : "manual"),
           ),
       )
       .when(r.used !== null, (el) =>
@@ -563,9 +594,7 @@ export default class Ssh extends View {
           .pt(12)
           .when(!p5, (el) => el.border_t(1).border_color(t.border))
           .children(
-            keys.map(([k, l]) =>
-              p5 ? p5Keycap(k, l) : this.keycap(t, k, l),
-            ),
+            keys.map(([k, l]) => (p5 ? p5Keycap(k, l) : this.keycap(t, k, l))),
           )
           .child(div().flex_1())
           .child(
