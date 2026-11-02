@@ -30,10 +30,11 @@ All seven mods run programs (`exec`, `hc`) and read files outside their folders:
 
 ### Develop
 
-1. Link each folder in `mods/` into `~/.config/herdr-app/mods/`, so edits apply without copying:
+1. Link each folder in `mods/` into `~/.config/herdr-app/mods/`, so edits apply without copying. Copy `q-saddle-quick` instead, because Herdr loads no image through a symlink; copy it again after each edit:
 
    ```sh
-   for m in mods/*; do ln -sfn "$PWD/$m" ~/.config/herdr-app/mods/; done
+   for m in mods/*; do [ "$m" = mods/q-saddle-quick ] || ln -sfn "$PWD/$m" ~/.config/herdr-app/mods/; done
+   rm -rf ~/.config/herdr-app/mods/q-saddle-quick && cp -R mods/q-saddle-quick ~/.config/herdr-app/mods/
    ```
 
 2. Merge `keys.json` into `~/.config/herdr-app/keys.json`.
