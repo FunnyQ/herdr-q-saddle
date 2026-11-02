@@ -38,8 +38,15 @@ export function relaunchArgv(old, launch) {
       ...envOf(old.argv),
       ...launch,
     ]);
-  return old.argv.length > 1 ? old.argv : [...HANDOVER, ...old.foreground.argv];
+  return old.argv.length > 1
+    ? withoutTask(old.argv)
+    : [...HANDOVER, ...old.foreground.argv];
 }
+
+// A task handed over at launch (herd tell) is a last word with spaces; flags and model ids have
+// none. One-word tasks stay; parse per harness if one slips through.
+const withoutTask = (argv) =>
+  /\s/.test(argv.at(-1)) ? argv.slice(0, -1) : argv;
 
 function holding(node, terminal) {
   if (node.content?.terminal === terminal) return node;

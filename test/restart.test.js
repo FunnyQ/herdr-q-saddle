@@ -66,6 +66,11 @@ test("relaunchArgv reruns a terminal's own command as it is", () => {
   assert.deepEqual(relaunchArgv({ argv: CODEX_ARGV }, null), CODEX_ARGV);
 });
 
+test("relaunchArgv drops the task a terminal was started with", () => {
+  const told = [...CODEX_ARGV, "Read the brief in /tmp/b.md"];
+  assert.deepEqual(relaunchArgv({ argv: told }, null), CODEX_ARGV);
+});
+
 test("relaunchArgv hands an agent typed into a shell back to a shell", () => {
   assert.deepEqual(
     relaunchArgv(
