@@ -149,15 +149,39 @@ export function ago(then, now) {
   return `${Math.floor(s / (365 * 86400))}y`;
 }
 
+const words = (query) => query.toLowerCase().split(/\s+/).filter(Boolean);
+
+const lettersAt = (text, word) => {
+  const lower = text.toLowerCase();
+  const run = lower.indexOf(word);
+  if (run >= 0) return [...word].map((_, i) => run + i);
+  const at = [];
+  for (const c of word) {
+    const i = lower.indexOf(c, (at.at(-1) ?? -1) + 1);
+    if (i < 0) return null;
+    at.push(i);
+  }
+  return at;
+};
+
+const fuzzy = (fields, query) =>
+  words(query).every((w) => fields.some((f) => lettersAt(f, w)));
+
 export function splitMatch(text, query) {
-  const q = query.trim().toLowerCase();
-  const at = q ? text.toLowerCase().indexOf(q) : -1;
-  if (at < 0) return null;
-  return [
-    text.slice(0, at),
-    text.slice(at, at + q.length),
-    text.slice(at + q.length),
-  ];
+  const hit = new Set();
+  for (const w of words(query)) {
+    const at = lettersAt(text, w);
+    if (!at) return null;
+    for (const i of at) hit.add(i);
+  }
+  if (!hit.size) return null;
+  const parts = [];
+  for (const [i, c] of text.split("").entries()) {
+    const last = parts.at(-1);
+    if (last?.[1] === hit.has(i)) last[0] += c;
+    else parts.push([c, hit.has(i)]);
+  }
+  return parts;
 }
 
 export function shortPath(path, home) {
@@ -167,12 +191,7 @@ export function shortPath(path, home) {
 }
 
 export function matches(row, query, home) {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return [row.name, ...row.aliases, shortPath(row.path, home)]
-    .join(" ")
-    .toLowerCase()
-    .includes(q);
+  return fuzzy([row.name, ...row.aliases, shortPath(row.path, home)], query);
 }
 
 export function useProject(registry, path, now) {

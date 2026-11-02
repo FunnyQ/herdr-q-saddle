@@ -142,10 +142,33 @@ test("ago shortens elapsed seconds to one unit", () => {
   assert.equal(ago(now - 800 * 86400, now), "2y");
 });
 
-test("splitMatch finds the query in text, ignoring case", () => {
-  assert.deepEqual(splitMatch("herdr-app", "APP"), ["herdr-", "app", ""]);
-  assert.deepEqual(splitMatch("herdr-app", " herd "), ["", "herd", "r-app"]);
+test("splitMatch marks each query letter it finds in order, ignoring case", () => {
+  assert.deepEqual(splitMatch("herdr-app", "APP"), [
+    ["herdr-", false],
+    ["app", true],
+  ]);
+  assert.deepEqual(splitMatch("herdr-app", " herd "), [
+    ["herd", true],
+    ["r-app", false],
+  ]);
+  assert.deepEqual(splitMatch("herdr-q-saddle", "herdrqsaddle"), [
+    ["herdr", true],
+    ["-", false],
+    ["q", true],
+    ["-", false],
+    ["saddle", true],
+  ]);
+  assert.deepEqual(splitMatch("herdr-app", "app herd"), [
+    ["herd", true],
+    ["r-", false],
+    ["app", true],
+  ]);
+  assert.deepEqual(splitMatch("~/Projects/q-lab/saddle", "saddle"), [
+    ["~/Projects/q-lab/", false],
+    ["saddle", true],
+  ]);
   assert.equal(splitMatch("herdr-app", "zzz"), null);
+  assert.equal(splitMatch("herdr-app", "ppa"), null);
   assert.equal(splitMatch("herdr-app", ""), null);
 });
 
@@ -168,6 +191,18 @@ test("matches is case-insensitive over name, aliases and the shown path", () => 
   assert.ok(matches(row, "BACK", "/Users/q"));
   assert.ok(matches(row, "~/projects", "/Users/q"));
   assert.ok(!matches(row, "frontend", "/Users/q"));
+});
+
+test("matches takes each word as letters in order within one field", () => {
+  const row = {
+    path: "/Users/q/Projects/q-lab/herdr-q-saddle",
+    name: "herdr-q-saddle",
+    aliases: ["saddle"],
+  };
+  assert.ok(matches(row, "herdrqsaddle", "/Users/q"));
+  assert.ok(matches(row, "qlab saddle", "/Users/q"));
+  assert.ok(!matches(row, "saddleherdr", "/Users/q"));
+  assert.ok(!matches(row, "herdr zzz", "/Users/q"));
 });
 
 test("shortPath replaces the home folder with ~", () => {

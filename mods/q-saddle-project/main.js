@@ -290,21 +290,23 @@ export default class Projects extends View {
       .child("idle");
   }
 
+  marked(t, el, text) {
+    const parts = splitMatch(text, this.query);
+    if (!parts) return el.child(text);
+    return el.children(
+      parts.map(([s, hit]) =>
+        hit ? div().text_color(t.accent).font_semibold().child(s) : s,
+      ),
+    );
+  }
+
   name(t, r) {
-    const parts = splitMatch(r.name, this.query);
     return h_flex()
       .min_w(0)
       .gap(6)
       .items_baseline()
       .child(
-        parts
-          ? h_flex()
-              .flex_none()
-              .text_color(t.foreground)
-              .child(parts[0])
-              .child(div().text_color(t.accent).font_semibold().child(parts[1]))
-              .child(parts[2])
-          : div().flex_none().text_color(t.foreground).child(r.name),
+        this.marked(t, h_flex().flex_none().text_color(t.foreground), r.name),
       )
       .children(
         r.aliases.map((a) =>
@@ -364,11 +366,15 @@ export default class Projects extends View {
           .gap(2)
           .child(this.name(t, r))
           .child(
-            div()
-              .truncate()
-              .text_size(11.5)
-              .text_color(t.dim)
-              .child(shortPath(r.path, home())),
+            this.marked(
+              t,
+              h_flex()
+                .min_w(0)
+                .overflow_hidden()
+                .text_size(11.5)
+                .text_color(t.dim),
+              shortPath(r.path, home()),
+            ),
           ),
       )
       .when(meta !== null, (el) => el.child(meta));
