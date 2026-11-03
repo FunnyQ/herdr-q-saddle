@@ -1,7 +1,8 @@
 // Opened by mod.open (ctrl-`), this mod is a one-shot runner: it toggles the space's quick
 // terminal and closes. Inside the dialog it opens, it draws the frame: `props().look` set.
 
-import { View, div, svg, image, PathBuilder } from "gpui-kit";
+import { View, div, svg, PathBuilder } from "gpui-kit";
+import { sprite } from "./sprite.js";
 import { h_flex } from "gpui-base";
 import * as herdr from "herdr";
 import { props, shared, theme, notify, closeOverlay } from "herdr";
@@ -161,17 +162,13 @@ export default class QuickTerminal extends View {
       .relative()
       .child(this.outline(p.frame).absolute().inset_0())
       .child(
-        image("mods/q-saddle-quick/title-shadow.png")
-          .w(196)
-          .h(196 / 3)
+        sprite("terminal-shadow", 196, 196 / 3)
           .absolute()
           .left(3)
           .top(3),
       )
       .child(
-        image("mods/q-saddle-quick/title.png")
-          .w(196)
-          .h(196 / 3)
+        sprite("terminal", 196, 196 / 3)
           .absolute()
           .left(0)
           .top(0),
