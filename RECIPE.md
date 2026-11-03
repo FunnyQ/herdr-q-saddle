@@ -10,9 +10,13 @@ All three dialogs share one frame: theme `popover` background, 16px padding, 12p
 
 **Persona 5 look.** While `shared("layout")` is `"persona5"`, all three dialogs switch style; every other layout keeps the look above.
 
+- Wrap dialogs in a frameless black irregular panel with a 3px white outline and cyan/magenta offset shadows. Use `modal.js`, copied identically into each dialog folder because mods cannot import across folders. Create `ModalFrame` once with `cx.new` and pass it to `modal(content, frame)`.
+- Step the frame's corners every 300ms in its own child view. Lag cyan by 3 poses and magenta by 6; pause at pose 0 when `shared("p5.motion")` is false. Keep the inputs and content stationary. Bound the wrapper to the viewport and allow scrolling on short windows.
+- Show a Japanese/English cut-paper title badge across the top-left edge, matching Quick Terminal. Display 計画 Projects, 接続 SSH, or 作戦 Launcher from the shared `assets/title-sprite.png`, using generated `sprite-data.js` coordinates; clip natively at 260px wide. Use a white first glyph on black and a black second glyph on white for each new badge. Reserve 20px to the frame's left for the badge to cover the upper-left corner. Keep context hints and 22px dynamic step titles inside the frame, square white-bordered search fields, and a red footer rule. Use widths 680px for Projects/SSH and 620px for the launcher. Route the project-to-launcher, Agent, and Restart overlays to the same frameless P5 launcher.
+
 - The chosen row becomes a slab: a black skewed quad with a 2px white edge over a red `#e60012` copy offset 6px right, whose top swings between 1px and 8px every 1500ms. It is 16px taller, 24px left and 22px right padding (Projects and SSH also 8px right margin), 800 weight. The other rows lose the `hover` fill. Every row is italic.
-- Launcher titles become a tag: the same slab, 30px tall, the first letter at 23.2px and the rest at 16px, 900 weight italic white. Labels and the breadcrumb are uppercase. Unchosen labels are `#bdbdbd`, the chosen one white.
-- Keycaps become a skewed white chip with 800-weight black text, then an 11px uppercase 800-weight italic white label. The footer loses its top line.
+- Place the 作戦 Launcher badge above the frame and keep the 22px dynamic step title, New Tab/New Agent/Restart Agent context hint, and existing breadcrumb inside. Keep unchosen labels `#bdbdbd` and the chosen one white.
+- Use skewed white keycaps with 800-weight black text, then an 11px uppercase 800-weight italic white label. Separate the footer with a red rule and allow hints to wrap.
 
 **Launcher** (`cmd-t`, `cmd-shift-c`, `cmd-r`; dialog 520px wide, title "Saddle")
 

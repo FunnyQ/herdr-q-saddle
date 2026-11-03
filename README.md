@@ -30,17 +30,22 @@ All seven mods run programs (`exec`, `hc`) and read files outside their folders:
 
 ### Develop
 
-1. Link each folder in `mods/` into `~/.config/herdr-app/mods/`, so edits apply without copying. Copy `q-saddle-quick` instead, because Herdr loads no image through a symlink; copy it again after each edit:
+1. Copy the mod folders into `~/.config/herdr-app/mods/`; copy changes again after each edit. Herdr cannot load title images through a symlink. If an installed folder is already a symlink, move the link aside before copying:
 
    ```sh
-   for m in mods/*; do [ "$m" = mods/q-saddle-quick ] || ln -sfn "$PWD/$m" ~/.config/herdr-app/mods/; done
-   rm -rf ~/.config/herdr-app/mods/q-saddle-quick && cp -R mods/q-saddle-quick ~/.config/herdr-app/mods/
+   cp -R mods/q-saddle-* ~/.config/herdr-app/mods/
+   mkdir -p ~/.config/herdr-app/assets
+   cp assets/title-sprite.png assets/title-sprite.json ~/.config/herdr-app/assets/
    ```
 
 2. Merge `keys.json` into `~/.config/herdr-app/keys.json`.
-3. Restart Herdr.
+3. Switch away from the current layout and back after replacing an installed symlink with a copy.
 
 ## Quick terminal
+
+Under the `persona5` layout, Projects, SSH, New Tab, Agent and Restart share a black cutout frame with a white outline and cyan/magenta shadows. Japanese/English title badges overlap the top-left edge, matching Quick Terminal. Frames change pose every 300ms; the layout's `ANIMATION` control pauses them. Keep text and inputs stationary. Other layouts use the normal theme styling.
+
+Load all titles from the shared `assets/title-sprite.png`, also used by the Persona 5 layout's Spaces and Agents. Keep `sprite-data.js` in each consuming mod; Herdr does not allow JavaScript imports across mod folders. Copy the shared asset into `~/.config/herdr-app/assets/` with the mods.
 
 Press `` ctrl-` `` to show or hide a centered terminal for the active space. Start each space's first shell in that space's folder. Hide the terminal with `` ctrl-` ``, the × button, or a click outside; Esc goes to the shell; switching spaces or layouts hides it too. Reopen it to reach the same shell, or a new one after the shell exits. Under the `persona5` layout, the terminal gets the Persona 5 frame.
 
