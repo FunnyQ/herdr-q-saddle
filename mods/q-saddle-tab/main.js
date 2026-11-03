@@ -26,7 +26,8 @@ import {
 } from "./lib.js";
 import { buildTab, herdrDo } from "./build.js";
 import { isAgentPane, targetPane, restart } from "./restart.js";
-import { isP5, Morph, slab, tag, keycap as p5Keycap } from "./p5.js";
+import { isP5, Morph, slab, keycap as p5Keycap } from "./p5.js";
+import { ModalFrame, modal, heading, searchField, footer as modalFooter } from "./modal.js";
 
 const dataDir = () => `${appHome()}/data/q-lab/q-saddle`;
 
@@ -54,6 +55,7 @@ const nameOf = (entry) => entry.label ?? entry.name;
 export default class Saddle extends View {
   init(_props, cx) {
     this.morph = cx.new(Morph, {});
+    this.frame = cx.new(ModalFrame, {});
     // mod.open stacks a new copy per key press: keep only the newest.
     const mine = props()?.overlay;
     const previous = shared(OPEN);
@@ -598,10 +600,11 @@ export default class Saddle extends View {
     if (kind === "text") keys.push(["⏎", "open"]);
     if (kind !== "launching") keys.push(["esc", "close"]);
     if (isP5())
-      return h_flex()
-        .gap(14)
+      return modalFooter(h_flex()
+        .flex_wrap()
+        .gap(10)
         .pt(12)
-        .children(keys.map(([k, l]) => p5Keycap(k, l)));
+        .children(keys.map(([k, l]) => p5Keycap(k, l))));
     return h_flex()
       .gap(14)
       .pt(12)
@@ -636,7 +639,7 @@ export default class Saddle extends View {
         .child(div().text_color(t.muted).child("Starting panes"));
     }
     if (step.kind === "text") {
-      return h_flex()
+      return searchField(h_flex()
         .h(36)
         .px(10)
         .items_center()
@@ -646,7 +649,7 @@ export default class Saddle extends View {
         .bg(t.background)
         .child(
           Input.new(this.input).flex_1().h_full().text_color(t.foreground),
-        );
+        ));
     }
     return v_flex()
       .gap(2)
@@ -660,7 +663,7 @@ export default class Saddle extends View {
       ? "Saddle"
       : (this.step?.title ?? "Loading…");
     const p5 = isP5();
-    return v_flex()
+    return modal(v_flex()
       .id("q-saddle-tab")
       .track_focus(this.handle)
       .on_key_down((e, cx) => this.onKey(e, cx))
@@ -670,48 +673,43 @@ export default class Saddle extends View {
       .bg(t.popover)
       .text_size(13)
       .child(
-        v_flex()
+        p5 ? v_flex().gap(10)
+          .child(heading(title, props()?.restart ? "Restart agent" : props()?.direct ? "New agent" : "New tab"))
+          .when(trail.length > 0, (el) => el.child(h_flex().gap(6).text_size(11).italic().font_weight(700)
+            .children(trail.flatMap((part, i) => [
+              ...(i ? [div().text_color("#e60012").child("/")] : []),
+              div().text_color("#bdbdbd").child(part.toUpperCase()),
+            ]))))
+          : v_flex()
           .gap(4)
           .child(
             h_flex()
               .h(16)
               .gap(6)
               .text_size(11.5)
-              .when(p5, (el) => el.italic().font_weight(800))
               .when(!trail.length, (el) =>
                 el
                   .text_color(t.dim)
-                  .child(
-                    p5
-                      ? (props()?.restart
-                          ? "Restart agent"
-                          : "New tab"
-                        ).toUpperCase()
-                      : props()?.restart
-                        ? "Restart agent"
-                        : "New tab",
-                  ),
+                  .child(props()?.restart ? "Restart agent" : "New tab"),
               )
               .children(
                 trail.flatMap((part, i) => [
                   ...(i ? [div().text_color(t.dim).child("›")] : []),
                   div()
                     .text_color(t.muted)
-                    .child(p5 ? part.toUpperCase() : part),
+                    .child(part),
                 ]),
               ),
           )
           .child(
-            p5
-              ? tag(title)
-              : div()
-                  .text_size(16)
-                  .font_semibold()
-                  .text_color(t.foreground)
-                  .child(title),
+            div()
+              .text_size(16)
+              .font_semibold()
+              .text_color(t.foreground)
+              .child(title),
           ),
       )
       .child(this.body(t))
-      .child(this.footer(t));
+      .child(this.footer(t)), this.frame, { title: "launcher" });
   }
 }

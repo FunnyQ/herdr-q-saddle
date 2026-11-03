@@ -1,5 +1,5 @@
 {
   "place": "none",
   "title": "Saddle",
-  "overlay": { "kind": "dialog", "width": 520 }
+  "overlay": { "kind": "dialog", "width": 620, "frame": "none" }
 }

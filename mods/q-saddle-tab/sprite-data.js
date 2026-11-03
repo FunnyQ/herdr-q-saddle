@@ -1,0 +1,84 @@
+export const SPRITE = {
+  "width": 4608,
+  "height": 3288,
+  "entries": {
+    "selected": {
+      "x": 4,
+      "y": 4,
+      "width": 1983,
+      "height": 793
+    },
+    "spaces": {
+      "x": 1991,
+      "y": 4,
+      "width": 2135,
+      "height": 736
+    },
+    "spaces-shadow": {
+      "x": 4,
+      "y": 801,
+      "width": 2135,
+      "height": 736
+    },
+    "agents": {
+      "x": 2143,
+      "y": 801,
+      "width": 2172,
+      "height": 724
+    },
+    "agents-shadow": {
+      "x": 4,
+      "y": 1541,
+      "width": 2172,
+      "height": 724
+    },
+    "terminal": {
+      "x": 2180,
+      "y": 1541,
+      "width": 2172,
+      "height": 724
+    },
+    "terminal-shadow": {
+      "x": 4,
+      "y": 2269,
+      "width": 2172,
+      "height": 724
+    },
+    "projects": {
+      "x": 2180,
+      "y": 2269,
+      "width": 731,
+      "height": 338
+    },
+    "ssh": {
+      "x": 2915,
+      "y": 2269,
+      "width": 729,
+      "height": 327
+    },
+    "launcher": {
+      "x": 3648,
+      "y": 2269,
+      "width": 744,
+      "height": 295
+    },
+    "commands": {
+      "x": 4,
+      "y": 2997,
+      "width": 740,
+      "height": 287
+    },
+    "switch": {
+      "x": 748,
+      "y": 2997,
+      "width": 740,
+      "height": 280
+    },
+    "confirm": {
+      "x": 1492,
+      "y": 2997,
+      "width": 743,
+      "height": 256
+    }
+  }
+};

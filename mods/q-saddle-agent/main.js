@@ -2,7 +2,7 @@
 // the saddle launcher with its layout menu skipped.
 
 import { View, div } from "gpui-kit";
-import { props, openOverlay, closeOverlay } from "herdr";
+import { props, openOverlay, closeOverlay, shared } from "herdr";
 
 export default class SaddleAgent extends View {
   init() {
@@ -13,7 +13,8 @@ export default class SaddleAgent extends View {
       mod: "q-saddle-tab",
       props: { direct: true },
       kind: "dialog",
-      width: 520,
+      width: shared("layout") === "persona5" ? 620 : 520,
+      ...(shared("layout") === "persona5" ? { frame: "none" } : {}),
     });
   }
 
