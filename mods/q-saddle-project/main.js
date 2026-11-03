@@ -43,6 +43,7 @@ import {
   basename,
 } from "./projects.js";
 import { isP5, Morph, slab, keycap as p5Keycap } from "./p5.js";
+import { ModalFrame, modal, heading, searchField, footer as modalFooter } from "./modal.js";
 
 const OPEN = "q-saddle.project.overlay";
 const CACHE = "q-saddle.project.rows";
@@ -92,6 +93,7 @@ async function realpath(path) {
 
 export default class Projects extends View {
   init(_props, cx) {
+    this.frame = cx.new(ModalFrame, {});
     this.morph = cx.new(Morph, {});
     // mod.open stacks a new copy per key press: keep only the newest.
     const mine = props()?.overlay;
@@ -208,7 +210,8 @@ export default class Projects extends View {
           ...(row.name !== basename(row.path) && { name: row.name }),
         },
         kind: "dialog",
-        width: 520,
+        width: isP5() ? 620 : 520,
+        ...(isP5() ? { frame: "none" } : {}),
       });
     });
   }
@@ -494,7 +497,7 @@ export default class Projects extends View {
     const rows = this.rows();
     const p5 = isP5();
     const keycap = (k, l) => (p5 ? p5Keycap(k, l) : this.keycap(t, k, l));
-    return v_flex()
+    return modal(v_flex()
       .id("q-saddle-project")
       .on_key_down((e, cx) => this.onKey(e, cx))
       .w_full()
@@ -502,6 +505,7 @@ export default class Projects extends View {
       .gap(12)
       .bg(t.popover)
       .text_size(13)
+      .when(p5, (el) => el.child(heading("Projects", "Choose your next target")))
       .child(
         h_flex()
           .h(40)
@@ -512,6 +516,7 @@ export default class Projects extends View {
           .border_1()
           .border_color(t.accent)
           .bg(t.background)
+          .map(searchField)
           .child(
             svg("mods/workspace-chrome/search.svg")
               .size(15)
@@ -531,6 +536,8 @@ export default class Projects extends View {
           .gap(14)
           .pt(12)
           .when(!p5, (el) => el.border_t(1).border_color(t.border))
+          .when(p5, (el) => el.flex_wrap())
+          .map(modalFooter)
           .child(keycap("↑↓", "select"))
           .child(keycap("⏎", "open"))
           .child(keycap("esc", "close"))
@@ -541,6 +548,6 @@ export default class Projects extends View {
               .text_color(t.dim)
               .child(rows.length ? `${this.at + 1} of ${rows.length}` : ""),
           ),
-      );
+      ), this.frame, { title: "projects" });
   }
 }
