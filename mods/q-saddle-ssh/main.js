@@ -44,6 +44,7 @@ import {
   closingTab,
 } from "./ssh.js";
 import { isP5, Morph, slab, keycap as p5Keycap } from "./p5.js";
+import { ModalFrame, modal, heading, searchField, footer as modalFooter } from "./modal.js";
 
 const OPEN = "q-saddle.ssh.overlay";
 const CACHE = "q-saddle.ssh.state";
@@ -82,6 +83,7 @@ function parseRegistry(text) {
 
 export default class Ssh extends View {
   init(_props, cx) {
+    this.frame = cx.new(ModalFrame, {});
     this.morph = cx.new(Morph, {});
     // mod.open stacks a new copy per key press: keep only the newest.
     const mine = props()?.overlay;
@@ -519,6 +521,7 @@ export default class Ssh extends View {
           .p(10)
           .rounded(8)
           .bg(t.background)
+          .when(isP5(), (el) => el.rounded(0).border_l(2).border_color("#e60012"))
           .text_size(12)
           .text_color(t.muted)
           .font_family("monospace")
@@ -551,7 +554,7 @@ export default class Ssh extends View {
           ["^X", "remove"],
           ["esc", "close"],
         ];
-    return v_flex()
+    return modal(v_flex()
       .id("q-saddle-ssh")
       .on_key_down((e, cx) => this.onKey(e, cx))
       .w_full()
@@ -559,6 +562,10 @@ export default class Ssh extends View {
       .gap(12)
       .bg(t.popover)
       .text_size(13)
+      .when(p5, (el) => el.child(heading(
+        this.form ? (preview ? "Review host" : "SSH config") : "SSH",
+        this.form ? "Configure your connection" : "Pick your destination",
+      )))
       .child(
         h_flex()
           .h(40)
@@ -569,6 +576,7 @@ export default class Ssh extends View {
           .border_1()
           .border_color(t.accent)
           .bg(t.background)
+          .map(searchField)
           .when(preview, (el) => el.opacity(0.4))
           .child(
             svg(
@@ -593,6 +601,8 @@ export default class Ssh extends View {
           .gap(14)
           .pt(12)
           .when(!p5, (el) => el.border_t(1).border_color(t.border))
+          .when(p5, (el) => el.flex_wrap())
+          .map(modalFooter)
           .children(
             keys.map(([k, l]) => (p5 ? p5Keycap(k, l) : this.keycap(t, k, l))),
           )
@@ -603,6 +613,6 @@ export default class Ssh extends View {
               .text_color(t.dim)
               .child(rows.length ? `${this.at + 1} of ${rows.length}` : ""),
           ),
-      );
+      ), this.frame, { title: "ssh" });
   }
 }

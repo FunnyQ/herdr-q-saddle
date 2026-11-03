@@ -1,5 +1,5 @@
 {
   "place": "none",
   "title": "SSH",
-  "overlay": { "kind": "dialog", "width": 560 }
+  "overlay": { "kind": "dialog", "width": 680, "frame": "none" }
 }
