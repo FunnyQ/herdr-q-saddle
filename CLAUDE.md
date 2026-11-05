@@ -76,6 +76,7 @@ Out of v1: worktree launcher (built-in `worktree` mod covers it), personal assis
 
 - `setShared(key, null)` and `setShared(key, undefined)` both keep the key in `shared.json` as `null`. No mod API deletes a key; edit `shared.json` only while Herdr is closed.
 - `image()` paths resolve against `~/.config/herdr-app`, and Herdr rejects one whose real path leaves it, so a symlinked mod shows no image and logs no error. Linking only the code files fails too: `herdr-app check` reports `module ./p5.js resolves outside the application directory`. Install `q-saddle-quick` by copy.
+- A terminal belongs to a space only through labels or a parent (2026-11-06). `--label herdr.space=<id>` alone makes Herdr open a new tab with it as a pane. `--parent <t> --outlive-parent` puts it under that terminal's tab as a sub-agent, with no pane. The quick shell stays `--no-parent`: when the parent ends (`cmd-r` kills the agent), the child lives on in no space, and no `hc` command or core method changes a parent after `terminal.run`.
 
 ## Machine findings (2026-11-05)
 
