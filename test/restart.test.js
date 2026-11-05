@@ -182,3 +182,41 @@ test("restart ends the replacement and keeps the old terminal when the swap fail
   await assert.rejects(restart(io, "t2", null), /t2/);
   assert.deepEqual(calls.slice(-2), ["doc.get", "hc kill t9"]);
 });
+
+test("restart on another machine starts the replacement there and swaps it in that machine's document", async () => {
+  const requests = [];
+  let request;
+  const io = {
+    scratch: "/tmp/req.json",
+    writeFile: async (_path, text) => {
+      request = JSON.parse(text);
+    },
+    exec: async (cmd, args) => {
+      if (cmd === "sh") {
+        requests.push({ method: request.method, args, params: request.params });
+        const value = {
+          spaces: [{ tabs: [{ root: { content: { terminal: "t2" } } }] }],
+        };
+        const result =
+          request.method === "doc.get" ? { value, version: 3 } : {};
+        return { code: 0, stdout: JSON.stringify({ result }) };
+      }
+      requests.push(["hc", ...args]);
+      if (args[0] === "get")
+        return {
+          code: 0,
+          stdout: JSON.stringify({ argv: ["/bin/zsh"], cwd: "/p/a", foreground: { argv: ["claude"], cwd: "/p/a" } }),
+        };
+      if (args[0] === "run")
+        return { code: 0, stdout: JSON.stringify({ address: "vps/t9" }) };
+      return { code: 0, stdout: "" };
+    },
+  };
+  await restart(io, "vps/t2", null);
+  const run = requests.find((r) => r[1] === "run");
+  assert.deepEqual(run.slice(run.indexOf("--on"), run.indexOf("--on") + 2), ["--on", "vps"]);
+  const set = requests.find((r) => r.method === "doc.set");
+  assert.equal(set.args.at(-1), "vps");
+  assert.equal(set.params.value.spaces[0].tabs[0].root.content.terminal, "t9");
+  assert.deepEqual(requests.at(-1), ["hc", "kill", "vps/t2"]);
+});

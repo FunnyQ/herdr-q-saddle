@@ -1,6 +1,7 @@
 // herdr-core's `herdr-app` document format is undocumented.
 
 import { inFolder } from "./lib.js";
+import { rpc, splitId } from "./ratios.js";
 
 // Herdr marks only agents that report a status; codex and opencode don't, so also look for a
 // configured harness in the command the terminal was started with.
@@ -68,32 +69,26 @@ export function swapTerminal(doc, from, to) {
   throw new Error(`no pane holds terminal ${from}`);
 }
 
-async function rpc(exec, path, writeFile, method, params) {
-  await writeFile(
-    path,
-    JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) + "\n",
-  );
-  const r = await exec("sh", ["-c", 'hc connect --json < "$1"', "sh", path]);
-  const reply = JSON.parse(r.stdout.split("\n")[0] || "{}");
-  if (reply.error)
-    throw Object.assign(new Error(`${method}: ${reply.error.message}`), {
-      kind: reply.error.data?.kind,
-    });
-  return reply.result;
-}
-
 // The request goes through a file: a whole document can outgrow one argv entry.
-async function swapInDoc({ exec, writeFile, scratch }, from, to) {
+async function swapInDoc({ exec, writeFile, scratch }, machine, from, to) {
   for (let attempt = 0; ; attempt++) {
-    const { value, version } = await rpc(exec, scratch, writeFile, "doc.get", {
-      name: "herdr-app",
-    });
+    const { value, version } = await rpc(
+      exec,
+      scratch,
+      writeFile,
+      "doc.get",
+      { name: "herdr-app" },
+      machine,
+    );
     try {
-      return await rpc(exec, scratch, writeFile, "doc.set", {
-        name: "herdr-app",
-        value: swapTerminal(value, from, to),
-        version,
-      });
+      return await rpc(
+        exec,
+        scratch,
+        writeFile,
+        "doc.set",
+        { name: "herdr-app", value: swapTerminal(value, from, to), version },
+        machine,
+      );
     } catch (e) {
       if (e.kind !== "conflict" || attempt > 0) throw e;
     }
@@ -107,6 +102,7 @@ async function hc(exec, args) {
 }
 
 export async function restart(io, terminal, launch) {
+  const [machine, local] = splitId(terminal);
   const old = JSON.parse(await hc(io.exec, ["get", terminal, "--json"]));
   const made = JSON.parse(
     await hc(io.exec, [
@@ -114,6 +110,7 @@ export async function restart(io, terminal, launch) {
       "--bg",
       "--no-parent",
       "--json",
+      ...(machine ? ["--on", machine] : []),
       "--cwd",
       old.foreground?.cwd ?? old.cwd,
       "--",
@@ -121,7 +118,7 @@ export async function restart(io, terminal, launch) {
     ]),
   );
   try {
-    await swapInDoc(io, terminal, made.address);
+    await swapInDoc(io, machine, local, splitId(made.address)[1]);
   } catch (e) {
     await io.exec("hc", ["kill", made.address]);
     throw e;

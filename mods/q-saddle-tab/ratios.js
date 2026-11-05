@@ -30,12 +30,22 @@ export function setWeights(doc, tabId, splits) {
   return doc;
 }
 
-async function rpc(exec, path, writeFile, method, params) {
+// Another machine's ids carry a `machine/` prefix; its own document uses the bare id.
+export function splitId(id) {
+  const at = id.indexOf("/");
+  return at < 0 ? [null, id] : [id.slice(0, at), id.slice(at + 1)];
+}
+
+// Each machine keeps its document in its own core, reached through `hc exec --on`.
+const CONNECT =
+  'if [ -n "$2" ]; then hc exec --on "$2" -i -- hc connect --json < "$1"; else hc connect --json < "$1"; fi';
+
+export async function rpc(exec, path, writeFile, method, params, machine) {
   await writeFile(
     path,
     JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) + "\n",
   );
-  const r = await exec("sh", ["-c", 'hc connect --json < "$1"', "sh", path]);
+  const r = await exec("sh", ["-c", CONNECT, "sh", path, machine ?? ""]);
   const reply = JSON.parse(r.stdout.split("\n")[0] || "{}");
   if (reply.error)
     throw Object.assign(new Error(`${method}: ${reply.error.message}`), {
@@ -46,16 +56,30 @@ async function rpc(exec, path, writeFile, method, params) {
 
 // The request goes through a file: a whole document can outgrow one argv entry.
 export async function applyRatios({ exec, writeFile, scratch }, tabId, splits) {
+  const [machine, tab] = splitId(tabId);
+  const local = splits.map((s) => ({
+    ...s,
+    pane: splitId(s.pane)[1],
+    from: splitId(s.from)[1],
+  }));
   for (let attempt = 0; ; attempt++) {
-    const { value, version } = await rpc(exec, scratch, writeFile, "doc.get", {
-      name: "herdr-app",
-    });
+    const { value, version } = await rpc(
+      exec,
+      scratch,
+      writeFile,
+      "doc.get",
+      { name: "herdr-app" },
+      machine,
+    );
     try {
-      return await rpc(exec, scratch, writeFile, "doc.set", {
-        name: "herdr-app",
-        value: setWeights(value, tabId, splits),
-        version,
-      });
+      return await rpc(
+        exec,
+        scratch,
+        writeFile,
+        "doc.set",
+        { name: "herdr-app", value: setWeights(value, tab, local), version },
+        machine,
+      );
     } catch (e) {
       if (e.kind !== "conflict" || attempt > 0) throw e;
     }

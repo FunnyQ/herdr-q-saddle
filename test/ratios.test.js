@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { setWeights } from "../mods/q-saddle-tab/ratios.js";
+import { setWeights, applyRatios } from "../mods/q-saddle-tab/ratios.js";
 
 const block = (id) => ({ type: "block", id, content: { terminal: `t-${id}` } });
 
@@ -81,4 +81,24 @@ test("setWeights skips a pane that already closed", () => {
 
 test("setWeights throws for a tab it cannot find", () => {
   assert.throws(() => setWeights(doc(), "nope", []), /tab nope/);
+});
+
+test("applyRatios on another machine writes its document with the machine's own ids", async () => {
+  let request;
+  const sent = [];
+  const io = {
+    scratch: "/tmp/req.json",
+    writeFile: async (_path, text) => {
+      request = JSON.parse(text);
+    },
+    exec: async (_cmd, args) => {
+      sent.push({ method: request.method, machine: args.at(-1), params: request.params });
+      const result = request.method === "doc.get" ? { value: doc(), version: 1 } : {};
+      return { code: 0, stdout: JSON.stringify({ result }) };
+    },
+  };
+  await applyRatios(io, "vps/tb1", [{ pane: "vps/files", from: "vps/agent", ratio: 0.25 }]);
+  assert.deepEqual(sent.map((r) => r.machine), ["vps", "vps"]);
+  const set = sent.find((r) => r.method === "doc.set");
+  assert.notDeepEqual(set.params.value, doc());
 });
