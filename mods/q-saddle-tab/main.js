@@ -6,6 +6,7 @@ import {
   readTextFile,
   focused,
   panes,
+  spaces,
   terminals,
   theme,
   props,
@@ -52,6 +53,14 @@ const OPEN = "q-saddle.overlay";
 
 const nameOf = (entry) => entry.label ?? entry.name;
 
+// The project picker names its machine; otherwise work where the focused space lives.
+function machine() {
+  if (props()?.machine !== undefined) return props().machine;
+  const here = focused()?.space;
+  return spaces().find((s) => s.id === here)?.machine ?? null;
+}
+const on = (m) => (m ? { on: m } : {});
+
 export default class Saddle extends View {
   init(_props, cx) {
     this.morph = cx.new(Morph, {});
@@ -69,7 +78,7 @@ export default class Saddle extends View {
     this.history = [];
     this.at = 0;
     cx.spawn(async (cx) => {
-      this.programs = await knownAgents().catch(() => []);
+      this.programs = await knownAgents(on(machine())).catch(() => []);
       cx.notify();
     });
     cx.spawn(async (cx) => {
@@ -315,10 +324,12 @@ export default class Saddle extends View {
     }
     const here = focused();
     const project = props()?.folder;
+    const m = machine();
     let folder = project ?? here?.cwd;
     if (folder && !project) {
       const top = await exec("git", ["rev-parse", "--show-toplevel"], {
         cwd: folder,
+        ...on(m),
       }).catch(() => null);
       if (top?.code === 0) folder = top.stdout.trim();
     }
@@ -340,6 +351,7 @@ export default class Saddle extends View {
               ...(props().name && { name: props().name }),
               tab: this.label,
               folder,
+              ...(m && { machine: m }),
               ...(argv && { argv }),
             })
           : herdrDo(exec, "tab.new", {
