@@ -207,11 +207,11 @@ export function useProject(registry, path, now) {
   return { ...registry, projects: sorted };
 }
 
-export function spaceShowing(path, panes, spaces) {
-  const local = spaces.filter((s) => s.machine === null);
+export function spaceShowing(path, panes, spaces, machine) {
+  const there = spaces.filter((s) => s.machine === machine);
   for (const pane of panes) {
     if (pane.cwd !== path) continue;
-    const space = local.find((s) => s.tabs.some((t) => t.id === pane.tab));
+    const space = there.find((s) => s.tabs.some((t) => t.id === pane.tab));
     if (space) return space;
   }
   return null;

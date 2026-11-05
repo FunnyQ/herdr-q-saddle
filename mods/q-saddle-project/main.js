@@ -16,6 +16,7 @@ import {
   writeTextFile,
   panes,
   spaces,
+  focused,
   theme,
   props,
   closeOverlay,
@@ -25,7 +26,7 @@ import {
   shared,
   setShared,
 } from "herdr";
-import { readdir } from "fs/promises";
+import { readdir, writeFile } from "fs/promises";
 import {
   DEFAULT_MARKERS,
   registryRows,
@@ -75,20 +76,51 @@ const KIND_COLOR = {
 };
 const MAIN = "\u{f09d1}  main";
 
-const expand = (path) => path.replace(/^~(?=\/|$)/, home());
+const expand = (path, h) => path.replace(/^~(?=\/|$)/, h);
+const on = (machine) => (machine ? { on: machine } : {});
 
-const kindAt = (path) => readdir(path).then(kindOf, () => null);
+const kindAt = (path, machine) =>
+  machine
+    ? exec("ls", ["-A", path], { on: machine }).then(
+        (r) => (r.code === 0 ? kindOf(r.stdout.split("\n")) : null),
+        () => null,
+      )
+    : readdir(path).then(kindOf, () => null);
 const emptyCache = () => ({
   registered: [],
   swept: [],
   kinds: {},
   root: null,
   registryFile: null,
+  home: null,
 });
 
-async function realpath(path) {
-  const r = await exec("sh", ["-c", 'cd "$1" && pwd -P', "sh", path]);
+async function realpath(path, machine) {
+  const r = await exec("sh", ["-c", 'cd "$1" && pwd -P', "sh", path], on(machine));
   return r.code === 0 ? r.stdout.trim() : path;
+}
+
+async function homeOn(machine) {
+  if (!machine) return home();
+  const r = await exec("sh", ["-c", 'printf %s "$HOME"'], { on: machine });
+  if (r.code !== 0 || !r.stdout) throw new Error(`no home on ${machine}`);
+  return r.stdout;
+}
+
+// writeTextFile writes only here; hc carries the file to another machine.
+async function writeOn(machine, path, next, previous) {
+  if (!machine) return writeTextFile(path, next, previous);
+  const scratch = `${appHome()}/data/q-lab/q-saddle/registry-write.json`;
+  await writeFile(scratch, next);
+  const r = await exec("sh", [
+    "-c",
+    'hc file write --on "$1" "$2" < "$3"',
+    "sh",
+    machine,
+    path,
+    scratch,
+  ]);
+  if (r.code !== 0) throw new Error(r.stderr.trim() || `hc file write: ${r.code}`);
 }
 
 export default class Projects extends View {
@@ -100,7 +132,15 @@ export default class Projects extends View {
     const previous = shared(OPEN);
     if (previous && previous !== mine) closeOverlay(previous);
     if (mine) setShared(OPEN, mine);
-    this.input = InputState.new({ placeholder: "Open a project…" });
+    // Like space.new from a key: the focused space's machine.
+    this.machine =
+      spaces().find((s) => s.id === focused()?.space)?.machine ?? null;
+    this.cacheKey = this.machine ? `${CACHE}.${this.machine}` : CACHE;
+    this.input = InputState.new({
+      placeholder: this.machine
+        ? `Open a project on ${this.machine}…`
+        : "Open a project…",
+    });
     this.input.on("change", (_e, cx) => this.filterChanged(cx));
     this.input.on("submit", (_e, cx) => this.open(cx));
     this.input.focus();
@@ -111,36 +151,43 @@ export default class Projects extends View {
     this.asked = 0;
     this.error = null;
     // The last open's rows, drawn at once: reads and the sweep stall while the dialog opens.
-    const cache = shared(CACHE);
-    Object.assign(this, emptyCache(), cache);
+    const cache = shared(this.cacheKey);
+    Object.assign(this, emptyCache(), { home: this.machine ? null : home() }, cache);
     cx.spawn(async (cx) => {
       try {
         const text = await readTextFile(
           `${appHome()}/data/q-lab/q-saddle/config.json`,
         );
         const config = text ? JSON.parse(text) : {};
+        this.home = await homeOn(this.machine);
         this.registryFile = expand(
           config.project_registry_file ??
             "~/.local/state/herdr-projects/registry.json",
+          this.home,
         );
         this.markers = config.project_markers ?? DEFAULT_MARKERS;
-        const registry = await readTextFile(this.registryFile);
+        const registry = await readTextFile(this.registryFile, on(this.machine));
         this.registered = registry ? registryRows(JSON.parse(registry)) : [];
         cx.notify();
         this.root = await realpath(
-          expand(config.projects_root ?? "~/Projects"),
+          expand(config.projects_root ?? "~/Projects", this.home),
+          this.machine,
         );
       } catch (e) {
         this.error = e.message;
         return cx.notify();
       }
-      const found = await exec("find", findArgs(this.root, this.markers));
+      const found = await exec(
+        "find",
+        findArgs(this.root, this.markers),
+        on(this.machine),
+      );
       const { swept, kinds } = projectsIn(
         found.stdout.split("\n"),
         this.markers,
       );
       for (const r of this.registered)
-        if (!(r.path in kinds)) kinds[r.path] = await kindAt(r.path);
+        if (!(r.path in kinds)) kinds[r.path] = await kindAt(r.path, this.machine);
       Object.assign(this, { swept, kinds });
       cx.notify();
       const fresh = Object.fromEntries(
@@ -148,7 +195,7 @@ export default class Projects extends View {
       );
       // setShared re-renders every mod, so skip it when nothing changed.
       if (JSON.stringify(fresh) !== JSON.stringify(cache))
-        setShared(CACHE, fresh);
+        setShared(this.cacheKey, fresh);
     });
   }
 
@@ -161,9 +208,8 @@ export default class Projects extends View {
   }
 
   rows() {
-    const h = home();
     return pickerRows(this.registered, this.swept, this.zoxide).filter((r) =>
-      matches(r, this.query, h),
+      matches(r, this.query, this.home),
     );
   }
 
@@ -177,11 +223,15 @@ export default class Projects extends View {
     if (query.length < 2) return;
     const asked = ++this.asked;
     cx.spawn(async (cx) => {
-      const r = await exec("zoxide", ["query", "--", query]).catch(() => null);
+      const r = await exec(
+        "zoxide",
+        ["query", "--", query],
+        on(this.machine),
+      ).catch(() => null);
       if (asked !== this.asked || r?.code !== 0) return;
       this.zoxide = r.stdout.trim() || null;
       if (this.zoxide && !(this.zoxide in this.kinds))
-        this.kinds[this.zoxide] = await kindAt(this.zoxide);
+        this.kinds[this.zoxide] = await kindAt(this.zoxide, this.machine);
       cx.notify();
     });
   }
@@ -199,13 +249,14 @@ export default class Projects extends View {
       );
       // Closing this overlay hands the keyboard back; open the launcher after so it keeps it.
       this.dismiss();
-      const space = spaceShowing(row.path, panes(), spaces());
+      const space = spaceShowing(row.path, panes(), spaces(), this.machine);
       if (space) return run("space.select", { id: space.id });
       openOverlay({
         mod: "q-saddle-tab",
         props: {
           direct: true,
           folder: row.path,
+          machine: this.machine,
           label: MAIN,
           ...(row.name !== basename(row.path) && { name: row.name }),
         },
@@ -220,13 +271,14 @@ export default class Projects extends View {
   async remember(path) {
     const top = await exec("git", ["rev-parse", "--show-toplevel"], {
       cwd: path,
+      ...on(this.machine),
     }).catch(() => null);
     const key = top?.code === 0 ? top.stdout.trim() : path;
-    const text = await readTextFile(this.registryFile);
+    const text = await readTextFile(this.registryFile, on(this.machine));
     const registry = text ? JSON.parse(text) : { version: 1, projects: {} };
     const now = Math.floor(Date.now() / 1000);
     const next = `${JSON.stringify(useProject(registry, key, now), null, 2)}\n`;
-    await writeTextFile(this.registryFile, next, text);
+    await writeOn(this.machine, this.registryFile, next, text);
   }
 
   onKey(e, cx) {
@@ -376,7 +428,7 @@ export default class Projects extends View {
                 .overflow_hidden()
                 .text_size(11.5)
                 .text_color(t.dim),
-              shortPath(r.path, home()),
+              shortPath(r.path, this.home),
             ),
           ),
       )
@@ -388,7 +440,7 @@ export default class Projects extends View {
       recent: "Recent",
       registered: "Registered",
       zoxide: "zoxide match",
-      found: `In ${shortPath(this.root ?? "", home())}`,
+      found: `In ${shortPath(this.root ?? "", this.home)}`,
     }[group];
     return h_flex()
       .h(HEADER_HEIGHT)
@@ -476,7 +528,12 @@ export default class Projects extends View {
                     t,
                     rows[item.row],
                     item.row,
-                    spaceShowing(rows[item.row].path, shownPanes, shownSpaces),
+                    spaceShowing(
+                      rows[item.row].path,
+                      shownPanes,
+                      shownSpaces,
+                      this.machine,
+                    ),
                     now,
                   ),
             ),

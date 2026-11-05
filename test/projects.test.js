@@ -243,7 +243,7 @@ test("useProject registers an unknown folder as manual, keeping keys sorted", ()
   });
 });
 
-test("spaceShowing finds the local space with a pane in that folder", () => {
+test("spaceShowing finds the space on that machine with a pane in that folder", () => {
   const spaces = [
     { id: "s1", machine: null, tabs: [{ id: "t1" }] },
     { id: "s2", machine: null, tabs: [{ id: "t2" }, { id: "t3" }] },
@@ -254,7 +254,9 @@ test("spaceShowing finds the local space with a pane in that folder", () => {
     { tab: "t3", cwd: "/p/a" },
     { tab: "vps/t4", cwd: "/p/b" },
   ];
-  assert.equal(spaceShowing("/p/a", panes, spaces), spaces[1]);
-  assert.equal(spaceShowing("/p/b", panes, spaces), null);
-  assert.equal(spaceShowing("/p/c", panes, spaces), null);
+  assert.equal(spaceShowing("/p/a", panes, spaces, null), spaces[1]);
+  assert.equal(spaceShowing("/p/b", panes, spaces, null), null);
+  assert.equal(spaceShowing("/p/b", panes, spaces, "vps"), spaces[2]);
+  assert.equal(spaceShowing("/p/a", panes, spaces, "vps"), null);
+  assert.equal(spaceShowing("/p/c", panes, spaces, null), null);
 });
