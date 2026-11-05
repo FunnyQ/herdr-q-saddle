@@ -8,8 +8,8 @@ Herdr-app mods that open agent layouts, pick projects and SSH targets, restart a
 | ---------------------- | ------------------ | ------------------------------------------------------------------------------------------------------ |
 | `q-saddle-tab`         | `cmd-t`            | Pick a tab layout, harness, model, and effort, then open a tab and apply each pane's split ratio.      |
 | `q-saddle-agent`       | `cmd-shift-c`      | Open `q-saddle-tab` with the layout menu skipped, straight to the agent pick.                          |
-| `q-saddle-project`     | `cmd-o`            | Pick a project from the registry, zoxide, or a `~/Projects` sweep; focus its space or open one.        |
-| `q-saddle-restart`     | `cmd-r`            | Restart the focused agent in place, keeping the pane and its neighbours.                               |
+| `q-saddle-project`     | `cmd-o`            | Pick a project from the registry, zoxide, or a `~/Projects` sweep on the focused space's machine; focus its space or open one there. |
+| `q-saddle-restart`     | `cmd-r`            | Restart the focused agent in place, keeping the pane and its neighbours, on this or another machine.  |
 | `q-saddle-ssh`         | `cmd-shift-s`      | Pick an SSH target and open a tab running `ssh`.                                                       |
 | `q-saddle-quick`       | `` ctrl-` ``       | Toggle a floating terminal for the active space; it keeps its shell, folder and programs while hidden. |
 | `q-saddle-quick-adopt` | `` ctrl-shift-` `` | Move the focused shell pane into the space's quick terminal without ending its shell.                  |

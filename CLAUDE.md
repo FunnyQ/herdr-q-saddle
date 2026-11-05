@@ -76,3 +76,12 @@ Out of v1: worktree launcher (built-in `worktree` mod covers it), personal assis
 
 - `setShared(key, null)` and `setShared(key, undefined)` both keep the key in `shared.json` as `null`. No mod API deletes a key; edit `shared.json` only while Herdr is closed.
 - `image()` paths resolve against `~/.config/herdr-app`, and Herdr rejects one whose real path leaves it, so a symlinked mod shows no image and logs no error. Linking only the code files fails too: `herdr-app check` reports `module ./p5.js resolves outside the application directory`. Install `q-saddle-quick` by copy.
+
+## Machine findings (2026-11-05)
+
+- Another machine's space, tab, pane and terminal ids carry a `machine/` prefix; that machine's `herdr-app` document uses the bare ids (`splitId` in `ratios.js`).
+- `hc connect` reaches only this computer's core. Reach another machine's document with `hc exec --on <machine> -i -- hc connect --json`.
+- `hc get`, `hc kill` take `machine/t7`; `hc run` needs `--on <machine>` and returns a prefixed address.
+- `space.new` from `herdr-app do` defaults to this computer; pass `machine`.
+- Right after a remote `doc.set`, `herdr-app ls` briefly leaves that machine's tab out while its layout reloads.
+- `writeTextFile` writes here only; `q-saddle-project` sends another machine's registry through `hc file write --on`, which creates missing folders and skips the stale-snapshot check.
