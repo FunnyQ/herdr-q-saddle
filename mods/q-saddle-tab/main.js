@@ -28,7 +28,7 @@ import {
 import { buildTab, herdrDo } from "./build.js";
 import { isAgentPane, targetPane, restart } from "./restart.js";
 import { isP5, Morph, slab, keycap as p5Keycap } from "./p5.js";
-import { ModalFrame, modal, heading, searchField, footer as modalFooter } from "./modal.js";
+import { ModalFrame, modal, heading, machinePill, searchField, footer as modalFooter } from "./modal.js";
 
 const dataDir = () => `${appHome()}/data/q-lab/q-saddle`;
 
@@ -675,6 +675,7 @@ export default class Saddle extends View {
       ? "Saddle"
       : (this.step?.title ?? "Loading…");
     const p5 = isP5();
+    const m = machine();
     return modal(v_flex()
       .id("q-saddle-tab")
       .track_focus(this.handle)
@@ -686,7 +687,7 @@ export default class Saddle extends View {
       .text_size(13)
       .child(
         p5 ? v_flex().gap(10)
-          .child(heading(title, props()?.restart ? "Restart agent" : props()?.direct ? "New agent" : "New tab"))
+          .child(heading(title, props()?.restart ? "Restart agent" : props()?.direct ? "New agent" : "New tab", m))
           .when(trail.length > 0, (el) => el.child(h_flex().gap(6).text_size(11).italic().font_weight(700)
             .children(trail.flatMap((part, i) => [
               ...(i ? [div().text_color("#e60012").child("/")] : []),
@@ -714,11 +715,18 @@ export default class Saddle extends View {
               ),
           )
           .child(
-            div()
-              .text_size(16)
-              .font_semibold()
-              .text_color(t.foreground)
-              .child(title),
+            h_flex()
+              .gap(8)
+              .items_center()
+              .justify_between()
+              .child(
+                div()
+                  .text_size(16)
+                  .font_semibold()
+                  .text_color(t.foreground)
+                  .child(title),
+              )
+              .when(Boolean(m), (el) => el.child(machinePill(m))),
           ),
       )
       .child(this.body(t))

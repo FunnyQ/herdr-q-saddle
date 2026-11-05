@@ -44,7 +44,7 @@ import {
   basename,
 } from "./projects.js";
 import { isP5, Morph, slab, keycap as p5Keycap } from "./p5.js";
-import { ModalFrame, modal, heading, searchField, footer as modalFooter } from "./modal.js";
+import { ModalFrame, modal, heading, machinePill, searchField, footer as modalFooter } from "./modal.js";
 
 const OPEN = "q-saddle.project.overlay";
 const CACHE = "q-saddle.project.rows";
@@ -136,11 +136,7 @@ export default class Projects extends View {
     this.machine =
       spaces().find((s) => s.id === focused()?.space)?.machine ?? null;
     this.cacheKey = this.machine ? `${CACHE}.${this.machine}` : CACHE;
-    this.input = InputState.new({
-      placeholder: this.machine
-        ? `Open a project on ${this.machine}…`
-        : "Open a project…",
-    });
+    this.input = InputState.new({ placeholder: "Open a project…" });
     this.input.on("change", (_e, cx) => this.filterChanged(cx));
     this.input.on("submit", (_e, cx) => this.open(cx));
     this.input.focus();
@@ -562,7 +558,7 @@ export default class Projects extends View {
       .gap(12)
       .bg(t.popover)
       .text_size(13)
-      .when(p5, (el) => el.child(heading("Projects", "Choose your next target")))
+      .when(p5, (el) => el.child(heading("Projects", "Choose your next target", this.machine)))
       .child(
         h_flex()
           .h(40)
@@ -585,6 +581,9 @@ export default class Projects extends View {
               .h_full()
               .text_size(14)
               .text_color(t.foreground),
+          )
+          .when(!p5 && Boolean(this.machine), (el) =>
+            el.child(machinePill(this.machine)),
           ),
       )
       .child(this.body(t, rows))

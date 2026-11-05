@@ -1,4 +1,4 @@
-import { View, div, PathBuilder } from "gpui-kit";
+import { View, div, svg, PathBuilder } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { isP5 } from "./p5.js";
 import { shared, theme } from "herdr";
@@ -57,13 +57,34 @@ export function modal(content, frame, badge) {
     .when(Boolean(badge), (el) => el.child(div().absolute().top(0).left(0).child(titleBadge(badge.title))));
 }
 
-export function heading(title, kicker) {
+const SERVER = "mods/workspace-chrome/server.svg";
+const MACHINE_CHIP = [[0, "10%"], ["97%", 0], ["100%", "90%"], ["3%", "100%"]];
+
+// Another machine's name, as a white card leaning against the kicker.
+const machineChip = (machine) => div().relative().px(12).py(4)
+  .child(paint(MACHINE_CHIP, "#e60012").top(3).left(4).right(-4).bottom(-3))
+  .child(paint(MACHINE_CHIP, "#ffffff"))
+  .child(h_flex().relative().gap(5).items_center().text_size(10).font_weight(900).italic().text_color("#000000")
+    .child(svg(SERVER).size(11).text_color("#000000"))
+    .child(machine.toUpperCase()));
+
+export function machinePill(machine) {
+  const t = theme();
+  return h_flex().flex_none().h(20).px(7).gap(5).items_center().rounded(5)
+    .bg(t.raised).border_1().border_color(t.border).text_size(11).text_color(t.muted)
+    .child(svg(SERVER).size(11).text_color(t.muted))
+    .child(machine);
+}
+
+export function heading(title, kicker, machine) {
   const known = ["projects", "ssh", "switch", "commands"].includes(title.toLowerCase());
   return v_flex().gap(8)
     .child(h_flex().items_center().justify_between()
-      .child(div().relative().px(12).py(4)
-        .child(paint([["4%", 0], ["100%", "12%"], ["96%", "100%"], [0, "84%"]], "#e60012"))
-        .child(div().relative().text_size(10).font_weight(800).italic().text_color("#ffffff").child(kicker.toUpperCase())))
+      .child(h_flex().gap(6).items_center()
+        .child(div().relative().px(12).py(4)
+          .child(paint([["4%", 0], ["100%", "12%"], ["96%", "100%"], [0, "84%"]], "#e60012"))
+          .child(div().relative().text_size(10).font_weight(800).italic().text_color("#ffffff").child(kicker.toUpperCase())))
+        .when(Boolean(machine), (el) => el.child(machineChip(machine))))
       .child(div().text_size(10).text_color("#969696").child("ESC / CLOSE")))
     .when(!known, (el) => el.child(div().text_size(22).line_height(1.05).font_weight(900).italic().text_color("#ffffff").child(title.toUpperCase())));
 }
