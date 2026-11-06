@@ -38,11 +38,12 @@ export function paneArgv(pane, agentLaunch) {
   return argv && env.length ? ["env", ...env, ...argv] : argv;
 }
 
-// pane.split has no folder argument: a new pane starts where the focused terminal is.
+// pane.split has no folder argument: a new pane starts where the focused terminal is. It also
+// inherits the app's bare PATH, so argv runs in a login shell, as tab.new does.
 export const inFolder = (folder, argv) => [
   "sh",
   "-c",
-  'cd "$1" || exit; shift; [ $# -gt 0 ] || set -- "${SHELL:-/bin/sh}"; exec "$@"',
+  'cd "$1" || exit; shift; s=${SHELL:-/bin/sh}; [ $# -gt 0 ] || exec "$s"; exec "$s" -lic \'"$@"\' "$s" "$@"',
   "sh",
   folder,
   ...(argv ?? []),
@@ -73,6 +74,11 @@ export function layoutTree(panes) {
 }
 
 const duplicates = (names) => names.filter((n, i) => names.indexOf(n) !== i);
+
+export const focusPane = (layout) =>
+  layout.panes.find((p) => p.name === layout.focus) ??
+  layout.panes.find((p) => p.type === "agent") ??
+  layout.panes[0];
 
 export function validateConfig(config) {
   const errors = [];
@@ -129,6 +135,8 @@ export function validateConfig(config) {
       );
     for (const n of duplicates(panes.map((p) => p.name)))
       errors.push(`layout '${layout.name}': duplicate pane name: ${n}`);
+    if (layout.focus !== undefined && !panes.some((p) => p.name === layout.focus))
+      errors.push(`layout '${layout.name}': focus names no pane: ${layout.focus}`);
     panes.forEach((pane, i) => {
       const where = `layout '${layout.name}' pane '${pane.name}'`;
       if (i === 0) {

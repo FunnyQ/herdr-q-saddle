@@ -9,9 +9,18 @@ import {
   menuLabel,
   inFolder,
   layoutTree,
+  focusPane,
 } from "../mods/q-saddle-tab/lib.js";
 import { execFileSync } from "node:child_process";
-import { readFileSync, realpathSync } from "node:fs";
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const runArgv = ([cmd, ...args], env = {}) =>
   execFileSync(cmd, args, {
@@ -20,8 +29,14 @@ const runArgv = ([cmd, ...args], env = {}) =>
     encoding: "utf8",
   }).trim();
 
-test("inFolder runs argv in the folder", () => {
-  assert.equal(runArgv(inFolder("/tmp", ["pwd", "-P"])), realpathSync("/tmp"));
+test("inFolder runs argv in the folder through the person's login shell", () => {
+  const shell = join(mkdtempSync(join(tmpdir(), "shell-")), "shell");
+  writeFileSync(shell, '#!/bin/sh\necho "$1"; shift; exec /bin/sh -c "$@"\n');
+  chmodSync(shell, 0o755);
+  assert.equal(
+    runArgv(inFolder("/tmp", ["pwd", "-P"]), { SHELL: shell }),
+    `-lic\n${realpathSync("/tmp")}`,
+  );
 });
 
 test("inFolder starts the person's shell when there is no argv", () => {
@@ -198,4 +213,19 @@ test("validateConfig accepts config.example.json", () => {
     readFileSync(new URL("../config.example.json", import.meta.url), "utf8"),
   );
   assert.deepEqual(validateConfig(example), []);
+});
+
+test("focusPane picks the layout's focus, else the first agent, else the root", () => {
+  const panes = good.tab_layouts[0].panes;
+  assert.equal(focusPane({ panes, focus: "files" }).name, "files");
+  assert.equal(focusPane({ panes }).name, "agent");
+  assert.equal(focusPane({ panes: panes.slice(1) }).name, "files");
+});
+
+test("validateConfig names a focus that matches no pane", () => {
+  const bad = structuredClone(good);
+  bad.tab_layouts[0].focus = "ghost";
+  assert.deepEqual(validateConfig(bad), [
+    "layout 'coding': focus names no pane: ghost",
+  ]);
 });

@@ -24,6 +24,7 @@ import {
   paneArgv,
   validateConfig,
   layoutTree,
+  focusPane,
 } from "./lib.js";
 import { buildTab, herdrDo } from "./build.js";
 import { isAgentPane, targetPane, restart } from "./restart.js";
@@ -368,9 +369,7 @@ export default class Saddle extends View {
         level: "warning",
       });
     }
-    const agent =
-      this.layout.panes.find((p) => p.type === "agent") ?? this.layout.panes[0];
-    return ids[agent.name];
+    return ids[focusPane(this.layout).name];
   }
 
   onKey(e, cx) {
