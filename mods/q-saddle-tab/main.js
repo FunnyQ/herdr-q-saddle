@@ -61,6 +61,7 @@ function machine() {
   return spaces().find((s) => s.id === here)?.machine ?? null;
 }
 const on = (m) => (m ? { on: m } : {});
+const VIM = { h: "left", j: "down", k: "up", l: "right" };
 
 export default class Saddle extends View {
   init(_props, cx) {
@@ -382,18 +383,16 @@ export default class Saddle extends View {
     const row = step.rows[this.at];
     const plain =
       !e.modifiers.control && !e.modifiers.platform && !e.modifiers.alt;
-    if (e.key === "down") this.at = (this.at + 1) % n;
-    else if (e.key === "up") this.at = (this.at + n - 1) % n;
+    const key = (plain && VIM[e.key]) || e.key;
+    if (key === "down") this.at = (this.at + 1) % n;
+    else if (key === "up") this.at = (this.at + n - 1) % n;
     else if (e.key === "enter") return this.choose(cx);
     else if (e.key === "backspace") return this.back(cx);
     else if (plain && /^[1-9]$/.test(e.key) && Number(e.key) <= n) {
       this.at = Number(e.key) - 1;
       return this.choose(cx);
-    } else if (
-      (e.key === "left" || e.key === "right") &&
-      row?.efforts?.length
-    ) {
-      const i = row.efforts.indexOf(row.effort) + (e.key === "right" ? 1 : -1);
+    } else if ((key === "left" || key === "right") && row?.efforts?.length) {
+      const i = row.efforts.indexOf(row.effort) + (key === "right" ? 1 : -1);
       row.effort =
         row.efforts[Math.min(row.efforts.length - 1, Math.max(0, i))];
     } else return;
@@ -603,9 +602,9 @@ export default class Saddle extends View {
       kind !== "launching" &&
       this.step
     ) {
-      keys.push(["↑↓", "select"], ["1–9", "pick"], ["⏎", "choose"]);
+      keys.push(["↑↓ jk", "select"], ["1–9", "pick"], ["⏎", "choose"]);
       if (kind === "model" && this.step.rows.some((r) => r.efforts.length))
-        keys.push(["←→", "effort"]);
+        keys.push(["←→ hl", "effort"]);
       if (this.history.length) keys.push(["⌫", "back"]);
     }
     if (kind === "text") keys.push(["⏎", "open"]);
