@@ -18,6 +18,12 @@ All three dialogs share one frame: theme `popover` background, 16px padding, 12p
 - Place the 作戦 Launcher badge above the frame and keep the 22px dynamic step title, New Tab/New Agent/Restart Agent context hint, and existing breadcrumb inside. Keep unchosen labels `#bdbdbd` and the chosen one white.
 - Use skewed white keycaps with 800-weight black text, then an 11px uppercase 800-weight italic white label. Separate the footer with a red rule and allow hints to wrap.
 
+**AWACS look.** While `shared("layout")` is `"awacs"`, the dialogs switch to a radar-console style (`awacs.js`, an identical copy in each mod folder that has `p5.js`); the Persona 5 and normal looks are unchanged.
+
+- Frameless `#081626f7` panel with a 1px `#2f5a78` border, 0 radius and 14px 2px `#6fc9dc` corner brackets. Header: a 10px 500 dim `OPERATION INFORMATION · PROJECTS|SSH|NEW TAB|AGENT|RESTART` label, `ESC CLOSE` top right, a 34px 400 uppercase title, and a `[ subtitle ]`. The launcher uses 620px; Quick Terminal draws the same border around its terminal. No sprite badges, italics or rounded corners; fonts come from the layout.
+- Search field 40px with a `>>` prefix. Rows are 38px with a diamond icon; the chosen row has a `#6fd6ee1a` fill and four 10px lock-on brackets in `#6fd6ee`, 3px outside it, that start 4px further out and settle in 200ms. They hold still when `shared("awacs.motion")` is false. Matches are `#e8e46a`; an empty list reads `NO CONTACT · TRY ANOTHER CALLSIGN`.
+- Footer: 1px rule, outlined keycaps with dim uppercase labels, and a faint tick ruler.
+
 **Launcher** (`cmd-t`, `cmd-shift-c`, `cmd-r`; dialog 520px wide, title "Saddle")
 
 - Top: a 16px-tall breadcrumb at 11.5px of the picks so far (layout › harness › `Model · effort` › tab name), parts in `muted` split by a `dim` "›". Before any pick it reads "New tab" (or "Restart agent") in `dim`.
@@ -121,7 +127,7 @@ Five mods, all `"place": "none"`, opened only by keys (`keys.json`, `global` sec
   - `q-saddle.overlay`, `q-saddle.project.overlay` and `q-saddle.ssh.overlay` hold the open copy's overlay id.
   - `q-saddle.project.rows` and `q-saddle.ssh.state` are row caches.
   - Projects also reads `space.colors`, written by the shipped `spaces` sidebar.
-  - All three dialogs read `layout` to pick the Persona 5 look (`p5.js`, an identical copy in each mod folder).
+  - All three dialogs read `layout` to pick the Persona 5 or AWACS look (`p5.js` and `awacs.js`, identical copies in each mod folder), and `awacs.motion` to pause the AWACS lock-on snap.
 
 **`herdr` functions:** `exec`, `run`, `props`, `openOverlay`, `closeOverlay`, `notify`, `theme`, `focused`, `panes`, `terminals`, `spaces`, `knownAgents`, `readTextFile`, `writeTextFile` (with the expected old text), `shared`, `setShared`, `home`, `appHome`. Also `writeFile` from `fs/promises`, for the scratch file, and `readdir`, for one folder's kind. UI: `v_flex`, `h_flex`, `Input`/`InputState`, `v_virtual_list`, `VirtualListScrollHandle`, `Scrollbar` from `gpui-base`; `div`, `svg`, `image` from `gpui-kit`.
 
