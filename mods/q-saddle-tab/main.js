@@ -29,6 +29,7 @@ import {
 import { buildTab, herdrDo } from "./build.js";
 import { isAgentPane, targetPane, restart } from "./restart.js";
 import { isP5, Morph, slab, keycap as p5Keycap } from "./p5.js";
+import { isAwacs, Lock, lock, ticks, keycap as awacsKeycap } from "./awacs.js";
 import { ModalFrame, modal, heading, machinePill, searchField, footer as modalFooter } from "./modal.js";
 
 const dataDir = () => `${appHome()}/data/q-lab/q-saddle`;
@@ -66,6 +67,7 @@ const VIM = { h: "left", j: "down", k: "up", l: "right" };
 export default class Saddle extends View {
   init(_props, cx) {
     this.morph = cx.new(Morph, {});
+    this.lock = cx.new(Lock, {});
     this.frame = cx.new(ModalFrame, {});
     // mod.open stacks a new copy per key press: keep only the newest.
     const mine = props()?.overlay;
@@ -528,19 +530,24 @@ export default class Saddle extends View {
       lead = lead.child(div().text_size(14).text_color(t.muted).child(r.glyph));
     const missing = harness && this.programFor(r.value)?.installed === false;
     const p5 = isP5();
+    const awacs = isAwacs();
+    const neutral = !p5 && !awacs;
     const label = p5 ? r.label.toUpperCase() : r.label;
     return h_flex()
       .id(`row-${i}`)
       .h(on && p5 ? 54 : 38)
       .px(10)
       .when(on && p5, (el) => el.pl(24).pr(22))
+      .when(awacs, (el) => el.px(12).mx(3).font_weight(500))
       .gap(12)
       .items_center()
       .rounded(8)
+      .when(awacs, (el) => el.rounded(0))
       .cursor_pointer()
-      .when(on && !p5, (el) => el.bg(t.selected))
-      .when(!on && !p5, (el) => el.hover((s) => s.bg(t.hover)))
+      .when(on && neutral, (el) => el.bg(t.selected))
+      .when(!on && neutral, (el) => el.hover((s) => s.bg(t.hover)))
       .when(on && p5, (el) => slab(el, this.morph).font_weight(800))
+      .when(on && awacs, (el) => lock(el.bg("#6fd6ee1a"), this.lock))
       .when(p5, (el) => el.italic())
       .on_click((_e, cx) => {
         this.at = i;
@@ -609,6 +616,12 @@ export default class Saddle extends View {
     }
     if (kind === "text") keys.push(["⏎", "open"]);
     if (kind !== "launching") keys.push(["esc", "close"]);
+    if (isAwacs())
+      return modalFooter(h_flex()
+        .gap(18)
+        .items_center()
+        .children(keys.map(([k, l]) => awacsKeycap(k, l)))
+        .child(ticks()));
     if (isP5())
       return modalFooter(h_flex()
         .flex_wrap()
@@ -673,6 +686,7 @@ export default class Saddle extends View {
       ? "Saddle"
       : (this.step?.title ?? "Loading…");
     const p5 = isP5();
+    const awacs = isAwacs();
     const m = machine();
     return modal(v_flex()
       .id("q-saddle-tab")
@@ -684,7 +698,13 @@ export default class Saddle extends View {
       .bg(t.popover)
       .text_size(13)
       .child(
-        p5 ? v_flex().gap(10)
+        awacs ? heading(
+          title,
+          [props()?.restart ? "Restart agent" : props()?.direct ? "New agent" : "New tab", ...trail].join(" / "),
+          m,
+          props()?.restart ? "RESTART" : props()?.direct ? "AGENT" : "NEW TAB",
+        )
+        : p5 ? v_flex().gap(10)
           .child(heading(title, props()?.restart ? "Restart agent" : props()?.direct ? "New agent" : "New tab", m))
           .when(trail.length > 0, (el) => el.child(h_flex().gap(6).text_size(11).italic().font_weight(700)
             .children(trail.flatMap((part, i) => [

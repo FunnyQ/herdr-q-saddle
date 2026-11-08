@@ -72,13 +72,13 @@ export function adopt(a) {
   a.run("terminal.park", { terminal: pane.terminal });
 }
 
-// Persona 5 reserves 76px above the terminal for its title image; the normal look only a title row.
+// Persona 5 reserves 76px above the terminal for its title image, AWACS 44px for its label row; the normal look only a title row.
 export function dialog(look, address, viewport, zoom) {
   const height =
     Math.min(viewport.height * 0.65, (viewport.width * 0.78 * 3) / 4) / zoom;
   const width = (height * 4) / 3;
   const terminal = { type: "block", content: { terminal: address } };
-  if (look !== "p5")
+  if (look !== "p5" && look !== "awacs")
     return {
       kind: "dialog",
       width,
@@ -99,9 +99,9 @@ export function dialog(look, address, viewport, zoom) {
   const frame = {
     width,
     height,
-    side: Math.max(28, Math.ceil(width * 0.05)),
-    top: Math.max(76, Math.ceil(height * 0.06)),
-    bottom: Math.max(28, Math.ceil(height * 0.06)),
+    side: look === "awacs" ? 14 : Math.max(28, Math.ceil(width * 0.05)),
+    top: look === "awacs" ? 44 : Math.max(76, Math.ceil(height * 0.06)),
+    bottom: look === "awacs" ? 14 : Math.max(28, Math.ceil(height * 0.06)),
   };
   const part = (part) => ({
     type: "block",

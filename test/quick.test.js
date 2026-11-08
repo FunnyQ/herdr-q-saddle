@@ -167,6 +167,14 @@ test("dialog draws its own frame in persona5 and uses Herdr's frame otherwise", 
   assert.equal(normal.width / normal.height, 4 / 3);
 });
 
+test("dialog draws its own frame in awacs too, with a slimmer top than persona5", () => {
+  const awacs = dialog("awacs", "t9", OPTS.viewport, 1);
+  assert.equal(awacs.frame, "none");
+  assert.equal(awacs.layout.children[0].size.px, 44);
+  assert.equal(awacs.layout.children[0].content.props.look, "awacs");
+  assert.equal(awacs.width / awacs.height, 4 / 3);
+});
+
 test("stale is true once the active space or the layout changed", () => {
   const visible = { space: KEY, layout: "terminals" };
   assert.ok(!stale(fakeApi(), visible, "terminals"));

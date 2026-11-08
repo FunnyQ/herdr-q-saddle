@@ -44,6 +44,7 @@ import {
   closingTab,
 } from "./ssh.js";
 import { isP5, Morph, slab, keycap as p5Keycap } from "./p5.js";
+import { isAwacs, AWACS_ROW, HIT, NO_CONTACT, Lock, lock, diamond, prompt, ticks, keycap as awacsKeycap } from "./awacs.js";
 import { ModalFrame, modal, heading, searchField, footer as modalFooter } from "./modal.js";
 
 const OPEN = "q-saddle.ssh.overlay";
@@ -85,6 +86,7 @@ export default class Ssh extends View {
   init(_props, cx) {
     this.frame = cx.new(ModalFrame, {});
     this.morph = cx.new(Morph, {});
+    this.lock = cx.new(Lock, {});
     // mod.open stacks a new copy per key press: keep only the newest.
     const mine = props()?.overlay;
     const previous = shared(OPEN);
@@ -367,7 +369,7 @@ export default class Ssh extends View {
     if (!parts) return el.child(text);
     return el.children(
       parts.map(([s, hit]) =>
-        hit ? div().text_color(t.accent).font_semibold().child(s) : s,
+        hit ? div().text_color(isAwacs() ? HIT : t.accent).font_semibold().child(s) : s,
       ),
     );
   }
@@ -375,20 +377,25 @@ export default class Ssh extends View {
   row(t, r, i, at) {
     const on = i === this.at;
     const p5 = isP5();
+    const awacs = isAwacs();
+    const neutral = !p5 && !awacs;
     const [name, ...aliases] = r.aliases;
     return h_flex()
-      .h(on && p5 ? ROW_HEIGHT + SELECTED_EXTRA : ROW_HEIGHT)
+      .h(awacs ? AWACS_ROW : on && p5 ? ROW_HEIGHT + SELECTED_EXTRA : ROW_HEIGHT)
       .px(10)
+      .when(awacs, (el) => el.px(12).mx(3).font_weight(500))
       .when(on && p5, (el) => el.pl(24).pr(22).mr(8))
       .gap(12)
       .items_center()
       .rounded(8)
+      .when(awacs, (el) => el.rounded(0))
       .cursor_pointer()
-      .when(on && !p5, (el) => el.bg(t.selected))
-      .when(!on && !p5, (el) => el.hover((s) => s.bg(t.hover)))
+      .when(on && neutral, (el) => el.bg(t.selected))
+      .when(!on && neutral, (el) => el.hover((s) => s.bg(t.hover)))
       .when(on && p5, (el) => slab(el, this.morph).font_weight(800))
+      .when(on && awacs, (el) => lock(el.bg("#6fd6ee1a"), this.lock))
       .when(p5, (el) => el.italic())
-      .child(this.tile(t, r))
+      .child(awacs ? diamond(on) : this.tile(t, r))
       .child(
         v_flex()
           .flex_1()
@@ -475,10 +482,20 @@ export default class Ssh extends View {
         .child(
           div()
             .text_color(t.muted)
-            .child(this.targets ? "No SSH target matches" : "Loading…"),
+            .child(
+              this.targets
+                ? isAwacs()
+                  ? NO_CONTACT
+                  : "No SSH target matches"
+                : "Loading…",
+            ),
         );
     const sizes = rows.map((_, i) =>
-      i === this.at && isP5() ? ROW_HEIGHT + SELECTED_EXTRA : ROW_HEIGHT,
+      isAwacs()
+        ? AWACS_ROW
+        : i === this.at && isP5()
+          ? ROW_HEIGHT + SELECTED_EXTRA
+          : ROW_HEIGHT,
     );
     const at = now();
     return v_flex()
@@ -522,6 +539,7 @@ export default class Ssh extends View {
           .rounded(8)
           .bg(t.background)
           .when(isP5(), (el) => el.rounded(0).border_l(2).border_color("#e60012"))
+          .when(isAwacs(), (el) => el.rounded(0).border_1().border_color("#2f5a78"))
           .text_size(12)
           .text_color(t.muted)
           .font_family("monospace")
@@ -542,6 +560,7 @@ export default class Ssh extends View {
     const rows = this.form ? [] : this.rows();
     const preview = this.form && !FIELDS[this.form.step];
     const p5 = isP5();
+    const awacs = isAwacs();
     const keys = this.form
       ? [
           ["⏎", preview ? "add" : "next"],
@@ -562,9 +581,11 @@ export default class Ssh extends View {
       .gap(12)
       .bg(t.popover)
       .text_size(13)
-      .when(p5, (el) => el.child(heading(
+      .when(p5 || awacs, (el) => el.child(heading(
         this.form ? (preview ? "Review host" : "SSH config") : "SSH",
         this.form ? "Configure your connection" : "Pick your destination",
+        undefined,
+        "SSH",
       )))
       .child(
         h_flex()
@@ -579,13 +600,15 @@ export default class Ssh extends View {
           .map(searchField)
           .when(preview, (el) => el.opacity(0.4))
           .child(
-            svg(
-              this.form
-                ? "mods/workspace-chrome/square-pen.svg"
-                : "mods/workspace-chrome/search.svg",
-            )
-              .size(15)
-              .text_color(t.muted),
+            awacs
+              ? prompt()
+              : svg(
+                  this.form
+                    ? "mods/workspace-chrome/square-pen.svg"
+                    : "mods/workspace-chrome/search.svg",
+                )
+                  .size(15)
+                  .text_color(t.muted),
           )
           .child(
             Input.new(this.form ? this.field : this.input)
@@ -604,9 +627,11 @@ export default class Ssh extends View {
           .when(p5, (el) => el.flex_wrap())
           .map(modalFooter)
           .children(
-            keys.map(([k, l]) => (p5 ? p5Keycap(k, l) : this.keycap(t, k, l))),
+            keys.map(([k, l]) =>
+              awacs ? awacsKeycap(k, l) : p5 ? p5Keycap(k, l) : this.keycap(t, k, l),
+            ),
           )
-          .child(div().flex_1())
+          .child(awacs ? ticks() : div().flex_1())
           .child(
             div()
               .text_size(11.5)

@@ -7,6 +7,7 @@ import { h_flex } from "gpui-base";
 import * as herdr from "herdr";
 import { props, shared, theme, notify, closeOverlay } from "herdr";
 import { isP5 } from "./p5.js";
+import { isAwacs, frame as awacsFrame } from "./awacs.js";
 import { VISIBLE, toggle, adopt, forget, stale } from "./quick.js";
 
 // The P5 frame's slab steps to a new pose every MORPH_STEP ms, each corner pulled up to PULL px inward.
@@ -64,7 +65,7 @@ export default class QuickTerminal extends View {
         else
           await toggle(herdr, {
             viewport: globalThis.window.viewport_size(),
-            look: isP5() ? "p5" : "normal",
+            look: isAwacs() ? "awacs" : isP5() ? "p5" : "normal",
             layout: shared("layout"),
             runner: this.runner,
             cancelled: () => this.closed,
@@ -125,10 +126,36 @@ export default class QuickTerminal extends View {
       .child(paint(line(shape), "#ffffff"));
   }
 
+  awacs(p) {
+    const { frame, part } = p;
+    const x = part === "right" ? frame.width - frame.side : 0;
+    const y =
+      part === "bottom" ? frame.height - frame.bottom : part ? frame.top : 0;
+    const box = awacsFrame(frame.width, frame.height, x, y);
+    if (part) return box;
+    return box.child(
+      h_flex()
+        .absolute()
+        .inset_0()
+        .px(24)
+        .items_center()
+        .justify_between()
+        .child(
+          div()
+            .text_size(10)
+            .font_weight(500)
+            .text_color("#7f9bb0")
+            .child("OPERATION INFORMATION · TERMINAL"),
+        )
+        .child(hideButton(p.overlay, "#7f9bb0", "#6fd6ee1a", "#e8f1f5")),
+    );
+  }
+
   render() {
     const p = props() ?? {};
     if (!p.look) return div();
     if (p.look === "p5" && p.part) return this.outline(p.frame, p.part);
+    if (p.look === "awacs" && p.part) return this.awacs(p);
     const visible = shared(VISIBLE);
     if (
       !this.leaving &&
@@ -138,6 +165,7 @@ export default class QuickTerminal extends View {
       this.leaving = true;
       closeOverlay(p.overlay);
     }
+    if (p.look === "awacs") return this.awacs(p);
     if (p.look !== "p5") {
       const t = theme();
       return h_flex()
