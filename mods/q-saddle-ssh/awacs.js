@@ -7,13 +7,13 @@ import { shared } from "herdr";
 export const isAwacs = () => shared("layout") === "awacs";
 
 export const AWACS_ROW = 38;
-export const HIT = "#e8e46a";
+export const HIT = "#ed9a4b";
 export const NO_CONTACT = "NO CONTACT · TRY ANOTHER CALLSIGN";
-const IFR = "#6fd6ee";
-const CHALK = "#e8f1f5";
-const DIM = "#7f9bb0";
-const RULE = "#1d3a52";
-const RULE_HI = "#2f5a78";
+const IFR = "#a8d6df";
+const CHALK = "#e0edf1";
+const DIM = "#94acba";
+const RULE = "#294858";
+const RULE_HI = "#547483";
 
 const SNAP_MS = 200;
 const SNAP_STEP = 50;
@@ -153,24 +153,29 @@ export const ticks = () =>
 
 export const header = (label, title, subtitle) =>
   v_flex()
-    .gap(4)
+    .gap(8)
+    .pb(10)
+    .border_b_1()
+    .border_color(RULE)
     .child(
       h_flex()
         .items_center()
         .justify_between()
         .child(
           div()
-            .text_size(10)
-            .font_weight(500)
-            .text_color(DIM)
-            .child(`OPERATION INFORMATION · ${label}`),
+            .px(6)
+            .py(2)
+            .text_size(9)
+            .font_weight(600)
+            .bg("#ed9a4b")
+            .text_color("#060e18")
+            .child(`OPERATION / ${label}`),
         )
         .child(keycap("ESC", "close")),
     )
     .child(
       div()
-        .mt(4)
-        .text_size(34)
+        .text_size(26)
         .line_height(1.1)
         .font_weight(400)
         .text_color(CHALK)
@@ -180,15 +185,15 @@ export const header = (label, title, subtitle) =>
       h_flex()
         .gap(8)
         .items_center()
-        .text_size(14)
+        .text_size(11.5)
         .text_color(CHALK)
-        .child(div().text_size(18).text_color(DIM).child("["))
+        .child(div().text_size(13).text_color(DIM).child("["))
         .child(subtitle.toUpperCase())
-        .child(div().text_size(18).text_color(DIM).child("]")),
+        .child(div().text_size(13).text_color(DIM).child("]")),
     );
 
 export const field = (el) =>
-  el.rounded(0).border_color(RULE_HI).bg("#030a13cc").h(40);
+  el.rounded(0).border_color(RULE_HI).bg("#060e18cc").h(36);
 
 export const rule = (el) => el.border_t(1).border_color(RULE).pt(12);
 
@@ -206,16 +211,16 @@ export function panel(content) {
         .child(
           content
             .relative()
-            .px(24)
-            .pt(22)
-            .pb(16)
+            .px(20)
+            .pt(18)
+            .pb(14)
             .gap(12)
-            .bg("#081626f7")
+            .bg("#0b1928f7")
             .border_1()
             .border_color(RULE_HI),
         ),
     )
-    .children(brackets(0, 14, 2, "#6fc9dc"));
+    .children(brackets(0, 10, 1, "#a8d6df"));
 }
 
 export const frame = (width, height, x, y) =>
@@ -230,8 +235,8 @@ export const frame = (width, height, x, y) =>
         .top(-y)
         .w(width)
         .h(height)
-        .bg("#081626f7")
+        .bg("#0b1928f7")
         .border_1()
         .border_color(RULE_HI)
-        .children(brackets(0, 14, 2, "#6fc9dc")),
+        .children(brackets(0, 10, 1, "#a8d6df")),
     );
