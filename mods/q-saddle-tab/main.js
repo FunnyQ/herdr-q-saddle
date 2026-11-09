@@ -481,6 +481,44 @@ export default class Saddle extends View {
   }
 
   efforts(t, row, i) {
+    if (isAwacs()) {
+      const focused = i === this.at;
+      const selected = row.efforts.indexOf(row.effort);
+      const signal = focused ? "#a8d6df" : "#94acba";
+      return h_flex()
+        .gap(3)
+        .flex_none()
+        .children(row.efforts.map((effort, index) => {
+          const on = effort === row.effort;
+          return v_flex()
+            .id(`effort-${i}-${effort}`)
+            .relative()
+            .w(42)
+            .h(26)
+            .gap(5)
+            .pt(4)
+            .px(3)
+            .items_center()
+            .cursor_pointer()
+            .text_size(9.5)
+            .font_weight(500)
+            .text_color(on ? (focused ? "#a8d6df" : "#e0edf1") : "#94acba")
+            .when(on, el => el.bg(focused ? "#a8d6df18" : "#94acba14")
+              .child(div().absolute().inset_0().border_1().border_color(signal)))
+            .hover(el => el.bg("#a8d6df18").text_color("#e0edf1"))
+            .on_click((_e, cx) => {
+              row.effort = effort;
+              this.at = i;
+              cx.stop_propagation();
+              cx.notify();
+            })
+            .child(effort.toUpperCase())
+            .child(h_flex().w_full().gap(2).children(
+              Array.from({ length: 4 }, () => div().flex_1().h(3)
+                .bg(index <= selected ? (on ? signal : `${signal}66`) : "#547483")),
+            ));
+        }));
+    }
     return h_flex()
       .gap(2)
       .p(2)
@@ -547,7 +585,7 @@ export default class Saddle extends View {
       .when(on && neutral, (el) => el.bg(t.selected))
       .when(!on && neutral, (el) => el.hover((s) => s.bg(t.hover)))
       .when(on && p5, (el) => slab(el, this.morph).font_weight(800))
-      .when(on && awacs, (el) => lock(el.bg("#6fd6ee1a"), this.lock, i))
+      .when(on && awacs, (el) => lock(el.bg("#e1d15b1a"), this.lock, i))
       .when(p5, (el) => el.italic())
       .on_click((_e, cx) => {
         this.at = i;
