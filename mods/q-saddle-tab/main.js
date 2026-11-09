@@ -547,7 +547,7 @@ export default class Saddle extends View {
       .when(on && neutral, (el) => el.bg(t.selected))
       .when(!on && neutral, (el) => el.hover((s) => s.bg(t.hover)))
       .when(on && p5, (el) => slab(el, this.morph).font_weight(800))
-      .when(on && awacs, (el) => lock(el.bg("#6fd6ee1a"), this.lock))
+      .when(on && awacs, (el) => lock(el.bg("#6fd6ee1a"), this.lock, i))
       .when(p5, (el) => el.italic())
       .on_click((_e, cx) => {
         this.at = i;

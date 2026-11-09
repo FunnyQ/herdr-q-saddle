@@ -18,6 +18,8 @@ const RULE_HI = "#2f5a78";
 const SNAP_MS = 200;
 const SNAP_STEP = 50;
 const SNAP_OUT = 4;
+const BREATH = 2;
+const BREATH_MS = 1400;
 
 const CORNERS = [
   ["top", "left"],
@@ -39,22 +41,29 @@ export const brackets = (gap, arm, stroke, color) =>
   );
 
 // Lock-on brackets 3px outside the selected row. They start 4px further out and settle within
-// SNAP_MS; a view that has not drawn for a while snaps again, which is how a new selection restarts it.
+// SNAP_MS, then breathe out and back by BREATH px every BREATH_MS while the row stays selected.
+let target;
+
 export class Lock extends View {
   init(_props, cx) {
     cx.timer.every(SNAP_STEP, (cx) => {
-      if (shared("awacs.motion") !== false && Date.now() - this.since < SNAP_MS)
-        cx.notify();
+      if (shared("awacs.motion") !== false || !this.still) cx.notify();
     });
   }
 
   render() {
     const now = Date.now();
-    if (now - (this.drawn ?? 0) > SNAP_MS * 1.5) this.since = now;
-    this.drawn = now;
-    const still = shared("awacs.motion") === false;
-    const age = Math.min(SNAP_MS, now - this.since);
-    const out = still ? 0 : Math.round(SNAP_OUT * (1 - age / SNAP_MS));
+    if (this.shownFor !== target) {
+      this.shownFor = target;
+      this.since = now;
+    }
+    this.still = shared("awacs.motion") === false;
+    const age = now - this.since;
+    const out = this.still
+      ? 0
+      : age < SNAP_MS
+        ? SNAP_OUT * (1 - age / SNAP_MS)
+        : (BREATH * (1 - Math.cos(((age - SNAP_MS) / BREATH_MS) * Math.PI * 2))) / 2;
     return div()
       .size_full()
       .relative()
@@ -62,8 +71,10 @@ export class Lock extends View {
   }
 }
 
-export const lock = (el, view) =>
-  el.relative().child(div().absolute().inset_0().child(view));
+export const lock = (el, view, key) => {
+  target = key;
+  return el.relative().child(div().absolute().inset_0().child(view));
+};
 
 const paint = (path, color) =>
   globalThis.window.paint_path(path, color).absolute().inset_0();

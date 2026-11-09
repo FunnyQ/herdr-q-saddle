@@ -393,7 +393,7 @@ export default class Ssh extends View {
       .when(on && neutral, (el) => el.bg(t.selected))
       .when(!on && neutral, (el) => el.hover((s) => s.bg(t.hover)))
       .when(on && p5, (el) => slab(el, this.morph).font_weight(800))
-      .when(on && awacs, (el) => lock(el.bg("#6fd6ee1a"), this.lock))
+      .when(on && awacs, (el) => lock(el.bg("#6fd6ee1a"), this.lock, i))
       .when(p5, (el) => el.italic())
       .child(awacs ? diamond(on) : this.tile(t, r))
       .child(
