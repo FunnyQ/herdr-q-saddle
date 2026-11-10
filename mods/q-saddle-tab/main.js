@@ -484,7 +484,7 @@ export default class Saddle extends View {
     if (isAwacs()) {
       const focused = i === this.at;
       const selected = row.efforts.indexOf(row.effort);
-      const signal = focused ? "#a8d6df" : "#94acba";
+      const signal = focused ? "#7fe36a" : "#6e9a66";
       return h_flex()
         .gap(3)
         .flex_none()
@@ -502,10 +502,10 @@ export default class Saddle extends View {
             .cursor_pointer()
             .text_size(9.5)
             .font_weight(500)
-            .text_color(on ? (focused ? "#a8d6df" : "#e0edf1") : "#94acba")
-            .when(on, el => el.bg(focused ? "#a8d6df18" : "#94acba14")
+            .text_color(on ? (focused ? "#7fe36a" : "#c4f0b4") : "#6e9a66")
+            .when(on, el => el.bg(focused ? "#7fe36a18" : "#6e9a6614")
               .child(div().absolute().inset_0().border_1().border_color(signal)))
-            .hover(el => el.bg("#a8d6df18").text_color("#e0edf1"))
+            .hover(el => el.bg("#7fe36a18").text_color("#c4f0b4"))
             .on_click((_e, cx) => {
               row.effort = effort;
               this.at = i;
@@ -515,7 +515,7 @@ export default class Saddle extends View {
             .child(effort.toUpperCase())
             .child(h_flex().w_full().gap(2).children(
               Array.from({ length: 4 }, () => div().flex_1().h(3)
-                .bg(index <= selected ? (on ? signal : `${signal}66`) : "#547483")),
+                .bg(index <= selected ? (on ? signal : `${signal}66`) : "#3d6340")),
             ));
         }));
     }

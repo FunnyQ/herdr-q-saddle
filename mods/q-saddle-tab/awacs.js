@@ -9,11 +9,11 @@ export const isAwacs = () => shared("layout") === "awacs";
 export const AWACS_ROW = 38;
 export const HIT = "#ed9a4b";
 export const NO_CONTACT = "NO CONTACT · TRY ANOTHER CALLSIGN";
-const IFR = "#a8d6df";
-const CHALK = "#e0edf1";
-const DIM = "#94acba";
-const RULE = "#294858";
-const RULE_HI = "#547483";
+const IFR = "#7fe36a";
+const CHALK = "#c4f0b4";
+const DIM = "#6e9a66";
+const RULE = "#213d24";
+const RULE_HI = "#3d6340";
 
 const SNAP_MS = 200;
 const SNAP_STEP = 50;
@@ -168,7 +168,7 @@ export const header = (label, title, subtitle) =>
             .text_size(9)
             .font_weight(600)
             .bg("#ed9a4b")
-            .text_color("#060e18")
+            .text_color("#040c06")
             .child(`OPERATION / ${label}`),
         )
         .child(keycap("ESC", "close")),
@@ -193,7 +193,7 @@ export const header = (label, title, subtitle) =>
     );
 
 export const field = (el) =>
-  el.rounded(0).border_color(RULE_HI).bg("#060e18cc").h(36);
+  el.rounded(0).border_color(RULE_HI).bg("#040c06cc").h(36);
 
 export const rule = (el) => el.border_t(1).border_color(RULE).pt(12);
 
@@ -215,12 +215,12 @@ export function panel(content) {
             .pt(18)
             .pb(14)
             .gap(12)
-            .bg("#0b1928f7")
+            .bg("#09170cf7")
             .border_1()
             .border_color(RULE_HI),
         ),
     )
-    .children(brackets(0, 10, 1, "#a8d6df"));
+    .children(brackets(0, 10, 1, "#7fe36a"));
 }
 
 export const frame = (width, height, x, y) =>
@@ -235,8 +235,8 @@ export const frame = (width, height, x, y) =>
         .top(-y)
         .w(width)
         .h(height)
-        .bg("#0b1928f7")
+        .bg("#09170cf7")
         .border_1()
         .border_color(RULE_HI)
-        .children(brackets(0, 10, 1, "#a8d6df")),
+        .children(brackets(0, 10, 1, "#7fe36a")),
     );
