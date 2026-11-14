@@ -7,7 +7,7 @@ import { shared } from "herdr";
 export const isAwacs = () => shared("layout") === "awacs";
 
 export const AWACS_ROW = 38;
-export const HIT = "#63c5f1";
+export const HIT = "#1e77b9";
 export const NO_CONTACT = "NO CONTACT · TRY ANOTHER CALLSIGN";
 const IFR = "#7fe36a";
 const CHALK = "#c4f0b4";
@@ -167,7 +167,7 @@ export const header = (label, title, subtitle) =>
             .py(2)
             .text_size(9)
             .font_weight(600)
-            .bg("#63c5f1")
+            .bg("#1e77b9")
             .text_color("#040c06")
             .child(`OPERATION / ${label}`),
         )
