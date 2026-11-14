@@ -26,16 +26,28 @@ export function agentArgv(agent, option, effort) {
 }
 
 // pane.split execs argv with no shell around it and closes the pane when it exits, so a command
-// hands over to the person's shell. A shell pane gets no argv, and env has nothing to wrap.
+// hands over to the person's shell. A shell pane gets no argv.
 export function paneArgv(pane, agentLaunch) {
-  const argv =
-    pane.type === "agent"
-      ? agentLaunch
-      : pane.type === "command"
-        ? ["sh", "-c", `set -m; ${pane.command}; exec "\${SHELL:-/bin/sh}"`]
-        : null;
-  const env = Object.entries(pane.env ?? {}).map(([k, v]) => `${k}=${v}`);
-  return argv && env.length ? ["env", ...env, ...argv] : argv;
+  return pane.type === "agent"
+    ? agentLaunch
+    : pane.type === "command"
+      ? ["sh", "-c", `set -m; ${pane.command}; exec "\${SHELL:-/bin/sh}"`]
+      : null;
+}
+
+// What tab.new wraps argv in: the login shell runs it and stays after it exits.
+export const inShell = (argv) => [
+  "sh",
+  "-c",
+  's=${SHELL:-/bin/sh}; [ $# -gt 0 ] || exec "$s" -li; exec "$s" -lic \'"$@"; exec "$0" -li\' "$s" "$@"',
+  "sh",
+  ...(argv ?? []),
+];
+
+// env wraps the shell, not the program in it: the shell's startup files must see the variables.
+export function withEnv(pane, argv) {
+  const pairs = Object.entries(pane.env ?? {}).map(([k, v]) => `${k}=${v}`);
+  return pairs.length ? ["env", ...pairs, ...(argv ?? inShell(null))] : argv;
 }
 
 // pane.split has no folder argument: a new pane starts where the focused terminal is. It also

@@ -348,6 +348,8 @@ export default class Saddle extends View {
       panes: this.layout.panes,
       folder,
       argvOf,
+      space: project ? null : here?.space,
+      name: this.label,
       ratios: this.config.apply_ratios !== false,
       open: (argv) =>
         project
