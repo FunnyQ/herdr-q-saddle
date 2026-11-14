@@ -5,6 +5,8 @@ import {
   effortsFor,
   resolveEffort,
   paneArgv,
+  withEnv,
+  inShell,
   validateConfig,
   menuLabel,
   inFolder,
@@ -113,16 +115,48 @@ test("resolveEffort falls back to the option default for an unknown effort", () 
   assert.equal(resolveEffort(claude, claude.options[2], "low"), null);
 });
 
-test("paneArgv wraps env and runs commands through sh", () => {
+test("paneArgv runs commands through sh and leaves env to withEnv", () => {
   assert.deepEqual(
     paneArgv(
       { type: "command", command: "yazi .", env: { Q_NO_BANNER: "1" } },
       null,
     ),
-    ["env", "Q_NO_BANNER=1", "sh", "-c", 'set -m; yazi .; exec "${SHELL:-/bin/sh}"'],
+    ["sh", "-c", 'set -m; yazi .; exec "${SHELL:-/bin/sh}"'],
   );
   assert.deepEqual(paneArgv({ type: "agent" }, ["claude"]), ["claude"]);
   assert.equal(paneArgv({ type: "shell", env: { A: "1" } }, null), null);
+});
+
+test("withEnv puts env outside the whole argv", () => {
+  assert.deepEqual(withEnv({ env: { A: "1", B: "x y" } }, ["sh", "-c", "ls"]), [
+    "env",
+    "A=1",
+    "B=x y",
+    "sh",
+    "-c",
+    "ls",
+  ]);
+  assert.deepEqual(withEnv({}, ["ls"]), ["ls"]);
+  assert.equal(withEnv({ env: {} }, null), null);
+});
+
+test("withEnv starts a shell when a pane has env and no argv", () => {
+  assert.deepEqual(withEnv({ env: { A: "1" } }, null), [
+    "env",
+    "A=1",
+    ...inShell(null),
+  ]);
+});
+
+test("inShell runs argv in the person's login shell, which stays afterwards", () => {
+  const shell = join(mkdtempSync(join(tmpdir(), "shell-")), "shell");
+  writeFileSync(shell, '#!/bin/sh\nprintf "%s|" "$@"\n');
+  chmodSync(shell, 0o755);
+  assert.equal(
+    runArgv(inShell(["claude", "hi"]), { SHELL: shell }),
+    `-lic|"$@"; exec "$0" -li|${shell}|claude|hi|`,
+  );
+  assert.equal(runArgv(inShell(null), { SHELL: shell }), "-li|");
 });
 
 test("menuLabel puts the icon two spaces before the label", () => {

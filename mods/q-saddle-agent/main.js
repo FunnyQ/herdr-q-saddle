@@ -9,12 +9,13 @@ export default class SaddleAgent extends View {
     const overlay = props()?.overlay;
     if (!overlay) return;
     closeOverlay(overlay);
+    const framed = ["persona5", "awacs"].includes(shared("layout"));
     openOverlay({
       mod: "q-saddle-tab",
       props: { direct: true },
       kind: "dialog",
-      width: shared("layout") === "persona5" ? 620 : 520,
-      ...(shared("layout") === "persona5" ? { frame: "none" } : {}),
+      width: framed ? 620 : 520,
+      ...(framed ? { frame: "none" } : {}),
     });
   }
 

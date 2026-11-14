@@ -48,6 +48,12 @@ Out of v1: worktree launcher (built-in `worktree` mod covers it), personal assis
 - `build.js` builds a layout for both the overlay and `cli.js open` (a plain-`node` CLI that cc-plugins' `herd tell` calls). Change the layout logic there, not in either caller.
 - Run `npm test` (node --test) for `lib.js`, `ratios.js`, `build.js`, `cli.js`, `projects.js`, `restart.js`, `ssh.js`, and `quick.js`; they import nothing from `herdr`.
 
+## Env findings (2026-11-14)
+
+- `tab.new`, `space.new` and `pane.split` take no env, and `tab.new` starts the shell itself, so `env` inside its argv runs after the startup files. `withEnv` in `lib.js` puts `env` outside the shell wrapper.
+- A root pane with `env` starts through `hc run --bg --no-parent --label herdr.space=<bare id>` (`openWithEnv` in `build.js`). Herdr shows it as a new, unselected tab named by its number; follow with `tab.rename` and `tab.select`. A prefixed space id in the label leaves the terminal in no space.
+- A new space always opens with its own tab. `openWithEnv` closes that tab after the labelled terminal appears.
+
 ## Picker findings (2026-10-30)
 
 - Mod JS (QuickJS) shares the window's thread. A `readdir` walk of `~/Projects` froze the whole window for seconds; run one `exec("find", ...)` instead, which works in another process.

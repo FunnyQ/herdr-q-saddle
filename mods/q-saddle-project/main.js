@@ -44,6 +44,7 @@ import {
   basename,
 } from "./projects.js";
 import { isP5, Morph, slab, keycap as p5Keycap } from "./p5.js";
+import { isAwacs, AWACS_ROW, HIT, NO_CONTACT, Lock, lock, diamond, prompt, ticks, keycap as awacsKeycap } from "./awacs.js";
 import { ModalFrame, modal, heading, machinePill, searchField, footer as modalFooter } from "./modal.js";
 
 const OPEN = "q-saddle.project.overlay";
@@ -127,6 +128,7 @@ export default class Projects extends View {
   init(_props, cx) {
     this.frame = cx.new(ModalFrame, {});
     this.morph = cx.new(Morph, {});
+    this.lock = cx.new(Lock, {});
     // mod.open stacks a new copy per key press: keep only the newest.
     const mine = props()?.overlay;
     const previous = shared(OPEN);
@@ -257,8 +259,8 @@ export default class Projects extends View {
           ...(row.name !== basename(row.path) && { name: row.name }),
         },
         kind: "dialog",
-        width: isP5() ? 620 : 520,
-        ...(isP5() ? { frame: "none" } : {}),
+        width: isP5() || isAwacs() ? 620 : 520,
+        ...(isP5() || isAwacs() ? { frame: "none" } : {}),
       });
     });
   }
@@ -326,9 +328,9 @@ export default class Projects extends View {
 
   status(t, space) {
     const line = h_flex().gap(6).items_center().text_size(11.5);
-    const label = { working: "working", blocked: "needs you", done: "done" }[
-      space.status
-    ];
+    const label = (isAwacs()
+      ? { working: "WORKING", blocked: "NEEDS YOU", done: "RTB" }
+      : { working: "working", blocked: "needs you", done: "done" })[space.status];
     // No spinner: an animation in a virtual list re-runs its JS renderer every frame.
     if (label)
       return line
@@ -338,7 +340,7 @@ export default class Projects extends View {
     return line
       .text_color(t.idle)
       .child(div().size(6).rounded(3).border_1().border_color(t.idle))
-      .child("idle");
+      .child(isAwacs() ? "STANDBY" : "idle");
   }
 
   marked(t, el, text) {
@@ -346,7 +348,7 @@ export default class Projects extends View {
     if (!parts) return el.child(text);
     return el.children(
       parts.map(([s, hit]) =>
-        hit ? div().text_color(t.accent).font_semibold().child(s) : s,
+        hit ? div().text_color(isAwacs() ? HIT : t.accent).font_semibold().child(s) : s,
       ),
     );
   }
@@ -369,6 +371,8 @@ export default class Projects extends View {
   row(t, r, i, space, now) {
     const on = i === this.at;
     const p5 = isP5();
+    const awacs = isAwacs();
+    const neutral = !p5 && !awacs;
     const meta = space
       ? v_flex()
           .flex_none()
@@ -398,18 +402,21 @@ export default class Projects extends View {
             .child(ago(r.used, now))
         : null;
     return h_flex()
-      .h(on && p5 ? ROW_HEIGHT + SELECTED_EXTRA : ROW_HEIGHT)
+      .h(awacs ? AWACS_ROW : on && p5 ? ROW_HEIGHT + SELECTED_EXTRA : ROW_HEIGHT)
       .px(10)
+      .when(awacs, (el) => el.px(12).mx(3).font_weight(500))
       .when(on && p5, (el) => el.pl(24).pr(22).mr(8))
       .gap(12)
       .items_center()
       .rounded(8)
+      .when(awacs, (el) => el.rounded(0))
       .cursor_pointer()
-      .when(on && !p5, (el) => el.bg(t.selected))
-      .when(!on && !p5, (el) => el.hover((s) => s.bg(t.hover)))
+      .when(on && neutral, (el) => el.bg(t.selected))
+      .when(!on && neutral, (el) => el.hover((s) => s.bg(t.hover)))
       .when(on && p5, (el) => slab(el, this.morph).font_weight(800))
+      .when(on && awacs, (el) => lock(el.bg("#6fd6ee1a"), this.lock, i))
       .when(p5, (el) => el.italic())
-      .child(this.tile(t, r, space))
+      .child(awacs ? diamond(on) : this.tile(t, r, space))
       .child(
         v_flex()
           .flex_1()
@@ -438,6 +445,18 @@ export default class Projects extends View {
       zoxide: "zoxide match",
       found: `In ${shortPath(this.root ?? "", this.home)}`,
     }[group];
+    if (isAwacs())
+      return h_flex()
+        .h(HEADER_HEIGHT)
+        .px(12)
+        .pb(4)
+        .gap(10)
+        .items_end()
+        .text_size(9.5)
+        .font_weight(500)
+        .text_color("#7f9bb0")
+        .child(label.toUpperCase())
+        .child(div().flex_1().h(0).mb(5).border_t(1).border_dashed().border_color("#2f5a78"));
     return h_flex()
       .h(HEADER_HEIGHT)
       .px(10)
@@ -481,7 +500,13 @@ export default class Projects extends View {
         .child(
           div()
             .text_color(t.muted)
-            .child(this.registryFile ? "No project matches" : "Loading…"),
+            .child(
+              this.registryFile
+                ? isAwacs()
+                  ? NO_CONTACT
+                  : "No project matches"
+                : "Loading…",
+            ),
         )
         .when(
           Boolean(this.registryFile) && this.query.trim().length < 2,
@@ -497,9 +522,11 @@ export default class Projects extends View {
     const sizes = items.map((item) =>
       item.header
         ? HEADER_HEIGHT
-        : item.row === this.at && isP5()
-          ? ROW_HEIGHT + SELECTED_EXTRA
-          : ROW_HEIGHT,
+        : isAwacs()
+          ? AWACS_ROW
+          : item.row === this.at && isP5()
+            ? ROW_HEIGHT + SELECTED_EXTRA
+            : ROW_HEIGHT,
     );
     const height = Math.min(
       LIST_HEIGHT,
@@ -549,7 +576,9 @@ export default class Projects extends View {
     const t = theme();
     const rows = this.rows();
     const p5 = isP5();
-    const keycap = (k, l) => (p5 ? p5Keycap(k, l) : this.keycap(t, k, l));
+    const awacs = isAwacs();
+    const keycap = (k, l) =>
+      awacs ? awacsKeycap(k, l) : p5 ? p5Keycap(k, l) : this.keycap(t, k, l);
     return modal(v_flex()
       .id("q-saddle-project")
       .on_key_down((e, cx) => this.onKey(e, cx))
@@ -558,7 +587,7 @@ export default class Projects extends View {
       .gap(12)
       .bg(t.popover)
       .text_size(13)
-      .when(p5, (el) => el.child(heading("Projects", "Choose your next target", this.machine)))
+      .when(p5 || awacs, (el) => el.child(heading("Projects", "Choose your next target", this.machine, "PROJECTS")))
       .child(
         h_flex()
           .h(40)
@@ -571,9 +600,11 @@ export default class Projects extends View {
           .bg(t.background)
           .map(searchField)
           .child(
-            svg("mods/workspace-chrome/search.svg")
-              .size(15)
-              .text_color(t.muted),
+            awacs
+              ? prompt()
+              : svg("mods/workspace-chrome/search.svg")
+                  .size(15)
+                  .text_color(t.muted),
           )
           .child(
             Input.new(this.input)
@@ -582,7 +613,7 @@ export default class Projects extends View {
               .text_size(14)
               .text_color(t.foreground),
           )
-          .when(!p5 && Boolean(this.machine), (el) =>
+          .when(!p5 && !awacs && Boolean(this.machine), (el) =>
             el.child(machinePill(this.machine)),
           ),
       )
@@ -597,7 +628,7 @@ export default class Projects extends View {
           .child(keycap("↑↓", "select"))
           .child(keycap("⏎", "open"))
           .child(keycap("esc", "close"))
-          .child(div().flex_1())
+          .child(awacs ? ticks() : div().flex_1())
           .child(
             div()
               .text_size(11.5)

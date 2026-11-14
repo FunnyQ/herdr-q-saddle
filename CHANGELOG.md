@@ -5,6 +5,11 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- An opt-in AWACS look for the launcher, project picker, SSH picker, Agent, Restart and Quick Terminal dialogs, with lock-on selection brackets, active only under the awacs layout.
+
 ## [1.0.1] - 2026-11-06
 
 _tracks tag `v1.0.1`_

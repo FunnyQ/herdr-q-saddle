@@ -1,6 +1,7 @@
 import { View, div, svg, PathBuilder } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { isP5 } from "./p5.js";
+import { isAwacs, panel as awacsPanel, header, field, rule } from "./awacs.js";
 import { shared, theme } from "herdr";
 import { sprite } from "./sprite.js";
 
@@ -47,6 +48,7 @@ export function titleBadge(kind) {
 }
 
 export function modal(content, frame, badge) {
+  if (isAwacs()) return awacsPanel(content);
   if (!isP5()) return content.rounded(12).border_1().border_color(theme().border);
   const viewport = globalThis.window.viewport_size();
   return div().id("p5-modal").relative().w_full().p(18).pl(badge ? 38 : 18).pt(badge ? 88 : 18)
@@ -76,7 +78,8 @@ export function machinePill(machine) {
     .child(machine);
 }
 
-export function heading(title, kicker, machine) {
+export function heading(title, kicker, machine, label) {
+  if (isAwacs()) return header(label, title, machine ? `${kicker} · ${machine}` : kicker);
   const known = ["projects", "ssh", "switch", "commands"].includes(title.toLowerCase());
   return v_flex().gap(8)
     .child(h_flex().items_center().justify_between()
@@ -90,9 +93,11 @@ export function heading(title, kicker, machine) {
 }
 
 export function searchField(el) {
+  if (isAwacs()) return field(el);
   return isP5() ? el.rounded(0).border_color("#ffffff").bg("#171717").h(44) : el;
 }
 
 export function footer(el) {
+  if (isAwacs()) return rule(el);
   return isP5() ? el.border_t(2).border_color("#e60012").pt(14) : el;
 }

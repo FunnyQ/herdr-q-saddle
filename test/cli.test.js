@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { main } from "../mods/q-saddle-tab/cli.js";
-import { inFolder } from "../mods/q-saddle-tab/lib.js";
+import { inFolder, inShell } from "../mods/q-saddle-tab/lib.js";
 
 const config = {
   default_tab_layout: "coding",
@@ -44,6 +44,19 @@ const config = {
       ],
     },
     { name: "plain", panes: [{ name: "shell", type: "shell" }] },
+    {
+      name: "quiet",
+      panes: [
+        { name: "shell", type: "shell", env: { Q_NO_BANNER: "1" } },
+        {
+          name: "side",
+          type: "shell",
+          direction: "right",
+          ratio: 0.5,
+          env: { Q_NO_BANNER: "1" },
+        },
+      ],
+    },
   ],
 };
 
@@ -56,10 +69,21 @@ function fakeHerdr(text = JSON.stringify(config)) {
       return {
         code: 0,
         stdout: JSON.stringify({
-          spaces: [{ tabs: [{ terminals: [{ terminal: "t1", pane: "p1" }] }] }],
+          spaces: [
+            {
+              tabs: [
+                { id: "tb1", terminals: [{ terminal: "t1", pane: "p1" }] },
+                { id: "tb9", terminals: [{ terminal: "t9", pane: "p9" }] },
+              ],
+            },
+          ],
         }),
         stderr: "",
       };
+    if (cmd === "hc")
+      return { code: 0, stdout: JSON.stringify({ address: "t9" }), stderr: "" };
+    if (["tab.select", "tab.close"].includes(args[1]))
+      return { code: 0, stdout: '{"ok":true}', stderr: "" };
     if (args[1] === "space.new")
       return {
         code: 0,
@@ -127,6 +151,47 @@ test("opens the default layout in a new space and reports its ids", async () => 
     { direction: "down", pane: "p2", argv: inFolder("/p/app", null) },
   ]);
   assert.equal(sent(calls, "pane.focus").length, 0);
+});
+
+test("a root pane with env starts through hc run, so its shell starts with the variables", async () => {
+  const { calls, io } = fakeHerdr();
+  const r = await main(["open", "--folder", "/p", "--layout", "quiet"], io);
+  assert.equal(r.code, 0);
+  assert.deepEqual(r.out, {
+    space: "sp1",
+    tab: "tb9",
+    agent_terminal: null,
+    panes: { shell: "p9", side: "p2" },
+  });
+  assert.deepEqual(sent(calls, "space.new"), [{ folder: "/p" }]);
+  assert.deepEqual(
+    calls.filter(([cmd]) => cmd === "hc").map(([, args]) => args),
+    [
+      [
+        "run",
+        "--bg",
+        "--json",
+        "--no-parent",
+        "--cwd",
+        "/p",
+        "--label",
+        "herdr.space=sp1",
+        "--",
+        "env",
+        "Q_NO_BANNER=1",
+        ...inShell(null),
+      ],
+    ],
+  );
+  assert.deepEqual(sent(calls, "tab.select"), [{ id: "tb9" }]);
+  assert.deepEqual(sent(calls, "tab.close"), [{ id: "tb1", confirmed: true }]);
+  assert.deepEqual(sent(calls, "pane.split"), [
+    {
+      direction: "right",
+      pane: "p9",
+      argv: ["env", "Q_NO_BANNER=1", ...inFolder("/p", null)],
+    },
+  ]);
 });
 
 test("reads the config under HERDR_APP_HOME", async () => {

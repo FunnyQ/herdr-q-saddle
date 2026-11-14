@@ -43,11 +43,11 @@ All seven mods run programs (`exec`, `hc`) and read files outside their folders:
 
 ## Quick terminal
 
-Under the `persona5` layout, Projects, SSH, New Tab, Agent and Restart share a black cutout frame with a white outline and cyan/magenta shadows. Japanese/English title badges overlap the top-left edge, matching Quick Terminal. Frames change pose every 300ms; the layout's `ANIMATION` control pauses them. Keep text and inputs stationary. Other layouts use the normal theme styling.
+Under the `persona5` layout, Projects, SSH, New Tab, Agent and Restart share a black cutout frame with a white outline and cyan/magenta shadows. Japanese/English title badges overlap the top-left edge, matching Quick Terminal. Frames change pose every 300ms; the layout's `ANIMATION` control pauses them. Keep text and inputs stationary. Under the `awacs` layout, the same dialogs use a flat navy panel with corner brackets, an `OPERATION INFORMATION` label, a bracketed subtitle, `>>` search, diamond rows with snapping lock-on brackets (paused by `awacs.motion`), and a tick-ruler footer; Quick Terminal gets the matching border. Other layouts use the normal theme styling.
 
 Load all titles from the shared `assets/title-sprite.png`, also used by the Persona 5 layout's Spaces and Agents. Keep `sprite-data.js` in each consuming mod; Herdr does not allow JavaScript imports across mod folders. Copy the shared asset into `~/.config/herdr-app/assets/` with the mods.
 
-Press `` ctrl-` `` to show or hide a centered terminal for the active space. Start each space's first shell in that space's folder. Hide the terminal with `` ctrl-` ``, the × button, or a click outside; Esc goes to the shell; switching spaces or layouts hides it too. Reopen it to reach the same shell, or a new one after the shell exits. Under the `persona5` layout, the terminal gets the Persona 5 frame.
+Press `` ctrl-` `` to show or hide a centered terminal for the active space. Start each space's first shell in that space's folder. Hide the terminal with `` ctrl-` ``, the × button, or a click outside; Esc goes to the shell; switching spaces or layouts hides it too. Reopen it to reach the same shell, or a new one after the shell exits. Under the `persona5` layout, the terminal gets the Persona 5 frame; under `awacs`, the AWACS border.
 
 To move an existing shell pane into the quick terminal, focus it and press `` ctrl-shift-` `` (or run `herdr-app do mod.open --name q-saddle-quick-adopt`). Adoption fails when the space already has a quick terminal.
 
