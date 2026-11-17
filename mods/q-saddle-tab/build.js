@@ -51,6 +51,23 @@ async function openWithEnv(io, { open, space, folder, name }, argv) {
   return { tab: { space: target, tab, terminal }, pane };
 }
 
+export async function splitAgent(
+  io,
+  { pane, from, folder, argv, tab, ratios },
+) {
+  const made = await herdrDo(io.exec, "pane.split", {
+    direction: pane.direction ?? "right",
+    pane: from,
+    argv: withEnv(pane, inFolder(folder, argv)),
+  });
+  let ratioError = null;
+  if (ratios && pane.ratio)
+    await applyRatios(io, tab, [
+      { pane: made.pane, from, ratio: pane.ratio },
+    ]).catch((e) => (ratioError = e));
+  return { pane: made.pane, ratioError };
+}
+
 export async function buildTab(
   io,
   { panes, folder, argvOf, open, space, name, ratios },

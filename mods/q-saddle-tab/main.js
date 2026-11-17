@@ -26,7 +26,7 @@ import {
   layoutTree,
   focusPane,
 } from "./lib.js";
-import { buildTab, herdrDo } from "./build.js";
+import { buildTab, herdrDo, splitAgent } from "./build.js";
 import { isAgentPane, targetPane, restart } from "./restart.js";
 import { isP5, Morph, slab, keycap as p5Keycap } from "./p5.js";
 import { isAwacs, Lock, lock, ticks, keycap as awacsKeycap } from "./awacs.js";
@@ -99,6 +99,10 @@ export default class Saddle extends View {
       }
       this.handle.focus();
       if (!this.errors.length && props()?.restart) this.startRestartStep();
+      else if (!this.errors.length && props()?.split) {
+        Object.assign(this, { layout: this.splitLayout(), picks: {}, label: null });
+        return this.advance(cx);
+      }
       else if (!this.errors.length) {
         this.startLayoutStep();
         if (props()?.direct) {
@@ -113,6 +117,18 @@ export default class Saddle extends View {
       }
       cx.notify();
     });
+  }
+
+  // The default layout's agent pane, split beside the focused pane.
+  splitLayout() {
+    const layout = this.config.tab_layouts.find(
+      (l) => l.name === this.config.default_tab_layout,
+    );
+    const pane = layout?.panes.find((p) => p.type === "agent") ?? {
+      name: "agent",
+      type: "agent",
+    };
+    return { name: "split", label: "Agent beside this pane", panes: [pane] };
   }
 
   dismiss() {
@@ -237,7 +253,8 @@ export default class Saddle extends View {
         const pane = await this.launch();
         this.dismiss();
         if (pane) run("pane.focus", { pane });
-        if (pane && this.layout.zoom) run("pane.zoom", { pane });
+        if (pane && (this.layout.zoom || this.rezoom))
+          run("pane.zoom", { pane });
       } catch (e) {
         this.errors = [e.message];
         cx.notify();
@@ -337,6 +354,32 @@ export default class Saddle extends View {
         ...on(m),
       }).catch(() => null);
       if (top?.code === 0) folder = top.stdout.trim();
+    }
+    if (props()?.split) {
+      if (!here?.pane) throw new Error("Focus a pane first.");
+      const zoomed = () => panes().find((p) => p.pane === here.pane)?.zoomed;
+      // A pane alone in its tab cannot zoom, but it is all you saw: treat it as zoomed.
+      const keep =
+        zoomed() || panes().filter((p) => p.tab === here.tab).length === 1;
+      const [pane] = this.layout.panes;
+      const pick = this.picks[pane.name];
+      const made = await splitAgent(io, {
+        pane,
+        from: here.pane,
+        folder,
+        argv: agentArgv(pick.agent, pick.option, pick.effort),
+        tab: here.tab,
+        ratios: this.config.apply_ratios !== false,
+      });
+      if (made.ratioError)
+        notify({
+          title: "Saddle: split ratio not applied",
+          body: made.ratioError.message,
+          level: "warning",
+        });
+      // Keep the focused pane zoomed: the new agent stays behind it.
+      this.rezoom = keep && !zoomed();
+      return keep ? here.pane : made.pane;
     }
     const argvOf = (pane) => {
       const pick = this.picks[pane.name];
@@ -741,12 +784,12 @@ export default class Saddle extends View {
       .child(
         awacs ? heading(
           title,
-          [props()?.restart ? "Restart agent" : props()?.direct ? "New agent" : "New tab", ...trail].join(" / "),
+          [props()?.restart ? "Restart agent" : props()?.direct || props()?.split ? "New agent" : "New tab", ...trail].join(" / "),
           m,
-          props()?.restart ? "RESTART" : props()?.direct ? "AGENT" : "NEW TAB",
+          props()?.restart ? "RESTART" : props()?.direct || props()?.split ? "AGENT" : "NEW TAB",
         )
         : p5 ? v_flex().gap(10)
-          .child(heading(title, props()?.restart ? "Restart agent" : props()?.direct ? "New agent" : "New tab", m))
+          .child(heading(title, props()?.restart ? "Restart agent" : props()?.direct || props()?.split ? "New agent" : "New tab", m))
           .when(trail.length > 0, (el) => el.child(h_flex().gap(6).text_size(11).italic().font_weight(700)
             .children(trail.flatMap((part, i) => [
               ...(i ? [div().text_color("#e60012").child("/")] : []),
