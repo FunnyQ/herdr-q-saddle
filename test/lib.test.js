@@ -263,3 +263,14 @@ test("validateConfig names a focus that matches no pane", () => {
     "layout 'coding': focus names no pane: ghost",
   ]);
 });
+
+test("validateConfig takes only true or false for zoom", () => {
+  const ok = structuredClone(good);
+  ok.tab_layouts[0].zoom = true;
+  assert.deepEqual(validateConfig(ok), []);
+  const bad = structuredClone(good);
+  bad.tab_layouts[0].zoom = "editor";
+  assert.deepEqual(validateConfig(bad), [
+    "layout 'coding': zoom must be true or false",
+  ]);
+});

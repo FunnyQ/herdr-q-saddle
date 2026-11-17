@@ -149,6 +149,8 @@ export function validateConfig(config) {
       errors.push(`layout '${layout.name}': duplicate pane name: ${n}`);
     if (layout.focus !== undefined && !panes.some((p) => p.name === layout.focus))
       errors.push(`layout '${layout.name}': focus names no pane: ${layout.focus}`);
+    if (layout.zoom !== undefined && typeof layout.zoom !== "boolean")
+      errors.push(`layout '${layout.name}': zoom must be true or false`);
     panes.forEach((pane, i) => {
       const where = `layout '${layout.name}' pane '${pane.name}'`;
       if (i === 0) {
