@@ -77,6 +77,7 @@ All three dialogs share one frame: theme `popover` background, 16px padding, 12p
 - "Blank terminal" closes the dialog and runs plain `tab.new`.
 - The new tab opens in the focused space, in the git top level of the focused terminal's folder (else that folder). Each further pane splits right or down from the previous pane (or `split_from`), in the same folder. Each pane takes its `ratio` share of its split, and focus ends on the first agent pane (else the first pane) once the dialog closes. If the sizes cannot be written, a warning toast "Saddle: split ratios not applied" appears and the panes keep equal sizes.
 - `cmd-shift-c` opens the launcher already past the layout step, on `default_tab_layout`.
+- `q-saddle-agent-bg` asks only for a harness and a model, then starts the agent with `hc run --bg --no-notify --parent <focused terminal>` in the git top level of that terminal's folder. No pane or tab opens, and the agent ends when the focused terminal's program ends. The agent shows the focused tab's `where` label, and a toast "Saddle: <harness> started" gives its address. With no focused terminal, it shows "Focus a terminal first."; with a terminal on another machine, it shows "A no-pane agent starts only on this computer."
 - `cmd-r` targets the focused pane if it runs an agent, else the first agent pane in the tab; with none it shows "No agent pane in this tab to restart." The rows are "Same setup" and each configured harness. "Same setup" reruns the exact launch command. A harness goes on to its model step and starts fresh in the agent's current folder, keeping any `env` the old launch set. The pane keeps its place and size, and its neighbours are untouched. The old agent's session is not resumed.
 - While opening, keys do nothing; `esc` included.
 
@@ -102,13 +103,14 @@ Five mods, all `"place": "none"`, opened only by keys (`keys.json`, `global` sec
 
 | Mod                | Key           | Overlay          | Role                                                                       |
 | ------------------ | ------------- | ---------------- | -------------------------------------------------------------------------- |
-| `q-saddle-tab`     | `cmd-t`       | dialog, 520 wide | The launcher; props `{direct?, restart?, folder?, label?, name?}`          |
+| `q-saddle-tab`     | `cmd-t`       | dialog, 520 wide | The launcher; props `{direct?, restart?, paneless?, folder?, label?, name?}`          |
 | `q-saddle-agent`   | `cmd-shift-c` | popup, 1×1       | Opens `q-saddle-tab` with `{direct: true}`                                 |
+| `q-saddle-agent-bg` | none        | popup, 1×1       | Opens `q-saddle-tab` with `{paneless: true}`                               |
 | `q-saddle-restart` | `cmd-r`       | popup, 1×1       | Opens `q-saddle-tab` with `{restart: true}`                                |
 | `q-saddle-project` | `cmd-o`       | dialog, 560 wide | Project picker; opens `q-saddle-tab` with `{direct, folder, label, name?}` |
 | `q-saddle-ssh`     | `cmd-shift-s` | dialog, 560 wide | SSH picker                                                                 |
 
-`q-saddle-agent` and `q-saddle-restart` render an empty `div()`. In `init` they `closeOverlay(props().overlay)`, then `openOverlay({mod: "q-saddle-tab", props, kind: "dialog", width: 520})`.
+`q-saddle-agent`, `q-saddle-agent-bg` and `q-saddle-restart` render an empty `div()`. In `init` they `closeOverlay(props().overlay)`, then `openOverlay({mod: "q-saddle-tab", props, kind: "dialog", width: 520})`.
 
 **Files**
 
@@ -191,10 +193,10 @@ Five mods, all `"place": "none"`, opened only by keys (`keys.json`, `global` sec
 - `doc.get`/`doc.set` need no `hello`: one JSON-RPC line on `hc connect --json` stdin is enough. Send it through a file (`fs/promises` `writeFile` inside `~/.config/herdr-app`), because a whole document can outgrow one argv entry.
 - Restarting a pane means swapping terminals. `hc keep` does not help, and `hc kill` alone closes the pane. Kill only the old address, and only after `doc.set` succeeded. An `hc kill` on the wrong address can end a session; never kill the caller's own `$HC_TERMINAL_ID`.
 - `hc ls --json` has no `foreground`, its `cwd` can be stale, and its `agent` field also names file managers such as yazi. Use `hc get --json` and `panes()[].program.agent`.
-- Codex and opencode report no status, so `program.agent` is false for them. Also match configured commands in `argv`.
+- Some harnesses report no status, so `program.agent` is false for them. Also match configured commands in `argv`.
 - Herdr reports no agent session ids, so a restart cannot resume a session.
 - There is no pane rename. A pane's `label` or `icon` in config is accepted and ignored; only the tab gets a name.
-- `mod.open` passes no props, and a mod cannot import another mod folder's files ("resolves outside the application directory"). Hence the two 1×1 popup mods that reopen the launcher with props. The shipped `confirm` mod only runs a `{name, args}` command, so it cannot carry a target pane for restart.
+- `mod.open` passes no props, and a mod cannot import another mod folder's files ("resolves outside the application directory"). Hence the 1×1 popup mods that reopen the launcher with props. The shipped `confirm` mod only runs a `{name, args}` command, so it cannot carry a target pane for restart.
 - `mod.open` stacks a new copy per key press. Each dialog keeps its overlay id in `shared()` and closes the previous copy in `init`.
 - Closing an overlay hands keyboard focus back. To chain dialogs, close the current one first, then open the next.
 - Closing the launcher cancels its tasks. Ignore `esc` while it opens, or you get a half-built tab.
@@ -213,7 +215,7 @@ Five mods, all `"place": "none"`, opened only by keys (`keys.json`, `global` sec
 
 ## Done when
 
-- `herdr-app check` passes for `q-saddle-tab`, `q-saddle-agent` and `q-saddle-restart`, and for `q-saddle-project` with an empty `q-saddle.project.rows`.
+- `herdr-app check` passes for `q-saddle-tab`, `q-saddle-agent`, `q-saddle-agent-bg` and `q-saddle-restart`, and for `q-saddle-project` with an empty `q-saddle.project.rows`.
 - `cmd-t` with the example config:
   - It lists "Blank terminal", "Agentic Coding" and "Agent", each with a split miniature.
   - Picking Agentic Coding, claude code, Opus at `high` and "discuss" opens one tab named with the discuss glyph and "discuss".
