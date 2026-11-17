@@ -77,6 +77,7 @@ All three dialogs share one frame: theme `popover` background, 16px padding, 12p
 - "Blank terminal" closes the dialog and runs plain `tab.new`.
 - The new tab opens in the focused space, in the git top level of the focused terminal's folder (else that folder). Each further pane splits right or down from the previous pane (or `split_from`), in the same folder. Each pane takes its `ratio` share of its split, and focus ends on the layout's `focus` pane, else the first agent pane, else the first pane, once the dialog closes. With `zoom: true`, that pane is zoomed. If the sizes cannot be written, a warning toast "Saddle: split ratios not applied" appears and the panes keep equal sizes.
 - `cmd-shift-c` opens the launcher already past the layout step, on `default_tab_layout`.
+- `q-saddle-agent-split` asks only for a harness and a model, then splits a new agent pane from the focused pane, in the git top level of its folder. The pane takes the direction, `ratio` and `env` of the first agent pane in `default_tab_layout` (else right, equal size). If the focused pane was zoomed or alone in its tab, it ends zoomed and keeps focus; otherwise focus moves to the agent. With no focused pane it shows "Focus a pane first."
 - `cmd-r` targets the focused pane if it runs an agent, else the first agent pane in the tab; with none it shows "No agent pane in this tab to restart." The rows are "Same setup" and each configured harness. "Same setup" reruns the exact launch command. A harness goes on to its model step and starts fresh in the agent's current folder, keeping any `env` the old launch set. The pane keeps its place and size, and its neighbours are untouched. The old agent's session is not resumed.
 - While opening, keys do nothing; `esc` included.
 
@@ -102,13 +103,14 @@ Five mods, all `"place": "none"`, opened only by keys (`keys.json`, `global` sec
 
 | Mod                | Key           | Overlay          | Role                                                                       |
 | ------------------ | ------------- | ---------------- | -------------------------------------------------------------------------- |
-| `q-saddle-tab`     | `cmd-t`       | dialog, 520 wide | The launcher; props `{direct?, restart?, folder?, label?, name?}`          |
+| `q-saddle-tab`     | `cmd-t`       | dialog, 520 wide | The launcher; props `{direct?, restart?, split?, folder?, label?, name?}`          |
 | `q-saddle-agent`   | `cmd-shift-c` | popup, 1×1       | Opens `q-saddle-tab` with `{direct: true}`                                 |
+| `q-saddle-agent-split` | none    | popup, 1×1       | Opens `q-saddle-tab` with `{split: true}`                                  |
 | `q-saddle-restart` | `cmd-r`       | popup, 1×1       | Opens `q-saddle-tab` with `{restart: true}`                                |
 | `q-saddle-project` | `cmd-o`       | dialog, 560 wide | Project picker; opens `q-saddle-tab` with `{direct, folder, label, name?}` |
 | `q-saddle-ssh`     | `cmd-shift-s` | dialog, 560 wide | SSH picker                                                                 |
 
-`q-saddle-agent` and `q-saddle-restart` render an empty `div()`. In `init` they `closeOverlay(props().overlay)`, then `openOverlay({mod: "q-saddle-tab", props, kind: "dialog", width: 520})`.
+`q-saddle-agent`, `q-saddle-agent-split` and `q-saddle-restart` render an empty `div()`. In `init` they `closeOverlay(props().overlay)`, then `openOverlay({mod: "q-saddle-tab", props, kind: "dialog", width: 520})`.
 
 **Files**
 

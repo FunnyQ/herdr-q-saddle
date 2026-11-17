@@ -8,7 +8,7 @@ The mod API is documented in `~/.config/herdr-app/AGENTS.md`, `herdr.d.ts`, and 
 
 ## Layout
 
-`mods/q-saddle-tab/` (layout launcher), `mods/q-saddle-agent/`, `mods/q-saddle-project/` (project picker), `mods/q-saddle-restart/` (reopens `q-saddle-tab` in restart mode), `mods/q-saddle-ssh/` (SSH picker), `mods/q-saddle-quick/` (quick terminal, also the frame its dialog draws), and `mods/q-saddle-quick-adopt/` (reopens `q-saddle-quick` in adopt mode) are the mod folders that get copied into `~/.config/herdr-app/mods/`. The repo root also holds `README.md`, `config.example.json`, and `RECIPE.md`, `preview.png`, and `keys.json`, which herdr.dev requires for sharing (see "Layouts and mods other people made" in `AGENTS.md`).
+`mods/q-saddle-tab/` (layout launcher), `mods/q-saddle-agent/`, `mods/q-saddle-agent-split/` (reopens `q-saddle-tab` to split an agent beside the focused pane), `mods/q-saddle-project/` (project picker), `mods/q-saddle-restart/` (reopens `q-saddle-tab` in restart mode), `mods/q-saddle-ssh/` (SSH picker), `mods/q-saddle-quick/` (quick terminal, also the frame its dialog draws), and `mods/q-saddle-quick-adopt/` (reopens `q-saddle-quick` in adopt mode) are the mod folders that get copied into `~/.config/herdr-app/mods/`. The repo root also holds `README.md`, `config.example.json`, and `RECIPE.md`, `preview.png`, and `keys.json`, which herdr.dev requires for sharing (see "Layouts and mods other people made" in `AGENTS.md`).
 
 ## Scope
 
@@ -83,6 +83,10 @@ Out of v1: worktree launcher (built-in `worktree` mod covers it), personal assis
 - `setShared(key, null)` and `setShared(key, undefined)` both keep the key in `shared.json` as `null`. No mod API deletes a key; edit `shared.json` only while Herdr is closed.
 - `image()` paths resolve against `~/.config/herdr-app`, and Herdr rejects one whose real path leaves it, so a symlinked mod shows no image and logs no error. Linking only the code files fails too: `herdr-app check` reports `module ./p5.js resolves outside the application directory`. Install `q-saddle-quick` by copy.
 - A terminal belongs to a space only through labels or a parent (2026-11-06). `--label herdr.space=<id>` alone makes Herdr open a new tab with it as a pane. `--parent <t> --outlive-parent` puts it under that terminal's tab as a sub-agent, with no pane. The quick shell stays `--no-parent`: when the parent ends (`cmd-r` kills the agent), the child lives on in no space, and no `hc` command or core method changes a parent after `terminal.run`.
+
+## Split agent findings (2026-11-17)
+
+- Zoom is view state: the `herdr-app` core document has no zoom field, and `herdr-app ls` shows none. Only a mod's `panes()[].zoomed` reads it, and `pane.zoom` toggles it.
 
 ## Machine findings (2026-11-05)
 
