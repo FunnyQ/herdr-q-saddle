@@ -26,7 +26,7 @@ import {
   layoutTree,
   focusPane,
 } from "./lib.js";
-import { buildTab, herdrDo, startPaneless } from "./build.js";
+import { buildTab, herdrDo } from "./build.js";
 import { isAgentPane, targetPane, restart } from "./restart.js";
 import { isP5, Morph, slab, keycap as p5Keycap } from "./p5.js";
 import { isAwacs, Lock, lock, ticks, keycap as awacsKeycap } from "./awacs.js";
@@ -50,12 +50,6 @@ const RESTART = {
   panes: [{ name: "agent", type: "agent" }],
 };
 const SAME = "same";
-
-const PANELESS = {
-  name: "paneless",
-  label: "Agent without a pane",
-  panes: [{ name: "agent", type: "agent" }],
-};
 
 const OPEN = "q-saddle.overlay";
 
@@ -105,10 +99,6 @@ export default class Saddle extends View {
       }
       this.handle.focus();
       if (!this.errors.length && props()?.restart) this.startRestartStep();
-      else if (!this.errors.length && props()?.paneless) {
-        Object.assign(this, { layout: PANELESS, picks: {}, label: null });
-        return this.advance(cx);
-      }
       else if (!this.errors.length) {
         this.startLayoutStep();
         if (props()?.direct) {
@@ -247,6 +237,7 @@ export default class Saddle extends View {
         const pane = await this.launch();
         this.dismiss();
         if (pane) run("pane.focus", { pane });
+        if (pane && this.layout.zoom) run("pane.zoom", { pane });
       } catch (e) {
         this.errors = [e.message];
         cx.notify();
@@ -346,17 +337,6 @@ export default class Saddle extends View {
         ...on(m),
       }).catch(() => null);
       if (top?.code === 0) folder = top.stdout.trim();
-    }
-    if (this.layout === PANELESS) {
-      if (!here?.terminal || !folder) throw new Error("Focus a terminal first.");
-      const pick = this.picks[PANELESS.panes[0].name];
-      const address = await startPaneless(exec, {
-        argv: agentArgv(pick.agent, pick.option, pick.effort),
-        folder,
-        parent: here.terminal,
-      });
-      notify({ title: `Saddle: ${nameOf(pick.agent)} started`, body: address });
-      return null;
     }
     const argvOf = (pane) => {
       const pick = this.picks[pane.name];
@@ -720,11 +700,7 @@ export default class Saddle extends View {
             .text_color(t.accent)
             .spin(900),
         )
-        .child(
-          div()
-            .text_color(t.muted)
-            .child(this.layout === PANELESS ? "Starting agent" : "Starting panes"),
-        );
+        .child(div().text_color(t.muted).child("Starting panes"));
     }
     if (step.kind === "text") {
       return searchField(h_flex()
@@ -765,12 +741,12 @@ export default class Saddle extends View {
       .child(
         awacs ? heading(
           title,
-          [props()?.restart ? "Restart agent" : props()?.direct || props()?.paneless ? "New agent" : "New tab", ...trail].join(" / "),
+          [props()?.restart ? "Restart agent" : props()?.direct ? "New agent" : "New tab", ...trail].join(" / "),
           m,
-          props()?.restart ? "RESTART" : props()?.direct || props()?.paneless ? "AGENT" : "NEW TAB",
+          props()?.restart ? "RESTART" : props()?.direct ? "AGENT" : "NEW TAB",
         )
         : p5 ? v_flex().gap(10)
-          .child(heading(title, props()?.restart ? "Restart agent" : props()?.direct || props()?.paneless ? "New agent" : "New tab", m))
+          .child(heading(title, props()?.restart ? "Restart agent" : props()?.direct ? "New agent" : "New tab", m))
           .when(trail.length > 0, (el) => el.child(h_flex().gap(6).text_size(11).italic().font_weight(700)
             .children(trail.flatMap((part, i) => [
               ...(i ? [div().text_color("#e60012").child("/")] : []),

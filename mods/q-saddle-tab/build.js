@@ -51,25 +51,6 @@ async function openWithEnv(io, { open, space, folder, name }, argv) {
   return { tab: { space: target, tab, terminal }, pane };
 }
 
-// A child of the focused terminal gets its tab's `where` label and no pane; it ends with that
-// terminal's program. --no-notify keeps hc from typing notes into it.
-export async function startPaneless(exec, { argv, folder, parent }) {
-  if (splitId(parent)[0])
-    throw new Error("A no-pane agent starts only on this computer.");
-  const r = await exec("hc", [
-    "run",
-    "--bg",
-    "--json",
-    "--no-notify",
-    "--parent",
-    parent,
-    "--",
-    ...inFolder(folder, argv),
-  ]);
-  if (r.code !== 0) throw new Error(`hc run: ${r.stderr.trim()}`);
-  return JSON.parse(r.stdout).address;
-}
-
 export async function buildTab(
   io,
   { panes, folder, argvOf, open, space, name, ratios },

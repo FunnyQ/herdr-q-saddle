@@ -8,7 +8,6 @@ Herdr-app mods that open agent layouts, pick projects and SSH targets, restart a
 | ---------------------- | ------------------ | ------------------------------------------------------------------------------------------------------ |
 | `q-saddle-tab`         | `cmd-t`            | Pick a tab layout, harness, model, and effort, then open a tab and apply each pane's split ratio.      |
 | `q-saddle-agent`       | `cmd-shift-c`      | Open `q-saddle-tab` with the layout menu skipped, straight to the agent pick.                          |
-| `q-saddle-agent-bg`    | none               | Pick a harness, model, and effort, then start the agent with no pane, as a child of the focused terminal (for herdr-send.nvim). |
 | `q-saddle-project`     | `cmd-o`            | Pick a project from the registry, zoxide, or a `~/Projects` sweep on the focused space's machine; focus its space or open one there. |
 | `q-saddle-restart`     | `cmd-r`            | Restart the focused agent in place, keeping the pane and its neighbours, on this or another machine.  |
 | `q-saddle-ssh`         | `cmd-shift-s`      | Pick an SSH target and open a tab running `ssh`.                                                       |
@@ -41,15 +40,6 @@ All seven mods run programs (`exec`, `hc`) and read files outside their folders:
 
 2. Merge `keys.json` into `~/.config/herdr-app/keys.json`.
 3. Switch away from the current layout and back after replacing an installed symlink with a copy.
-
-## No-pane agent
-
-Run `herdr-app do mod.open '{"name":"q-saddle-agent-bg"}'` to pick a harness, model, and effort and start the agent with no pane. Use it from a single-pane editor such as herdr-send.nvim, which lists the agent and attaches to it.
-
-- Start the agent as a child of the focused terminal. It takes that terminal's `where` label (`<space> / <tab>`), and it ends when that terminal's program ends.
-- Start the agent in the git top level of the focused terminal's folder.
-- Find its address in the "Saddle: <harness> started" toast, or in `hc ls`.
-- Start it on this computer only. A focused terminal on another machine shows an error.
 
 ## Quick terminal
 
