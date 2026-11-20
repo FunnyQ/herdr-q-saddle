@@ -1,7 +1,7 @@
 import { View, div, svg, PathBuilder } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { isP5 } from "./p5.js";
-import { isAwacs, panel as awacsPanel, header, field, rule } from "./awacs.js";
+import { isP5, keycap as p5Keycap } from "./p5.js";
+import { isAwacs, panel as awacsPanel, header, field, rule, keycap as awacsKeycap } from "./awacs.js";
 import { shared, theme } from "herdr";
 import { sprite } from "./sprite.js";
 
@@ -100,4 +100,52 @@ export function searchField(el) {
 export function footer(el) {
   if (isAwacs()) return rule(el);
   return isP5() ? el.border_t(2).border_color("#e60012").pt(14) : el;
+}
+
+export function keycap(key, label) {
+  if (isAwacs()) return awacsKeycap(key, label);
+  if (isP5()) return p5Keycap(key, label);
+  const t = theme();
+  return h_flex()
+    .gap(5)
+    .items_center()
+    .child(
+      div()
+        .px(5)
+        .h(18)
+        .flex()
+        .items_center()
+        .rounded(4)
+        .border_1()
+        .border_color(t.border)
+        .bg(t.raised)
+        .text_size(10.5)
+        .text_color(t.foreground)
+        .child(key),
+    )
+    .child(div().text_size(11.5).text_color(t.muted).child(label));
+}
+
+export function groupHeader(label, height) {
+  if (isAwacs())
+    return h_flex()
+      .h(height)
+      .px(12)
+      .pb(4)
+      .gap(10)
+      .items_end()
+      .text_size(9.5)
+      .font_weight(500)
+      .text_color("#7f9bb0")
+      .child(label.toUpperCase())
+      .child(div().flex_1().h(0).mb(5).border_t(1).border_dashed().border_color("#2f5a78"));
+  return h_flex()
+    .h(height)
+    .px(10)
+    .pb(4)
+    .items_end()
+    .text_size(11.5)
+    .font_medium()
+    .text_color(theme().muted)
+    .child(label);
 }

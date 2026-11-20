@@ -11,9 +11,7 @@ import {
 import {
   exec,
   home,
-  appHome,
   readTextFile,
-  writeTextFile,
   panes,
   spaces,
   focused,
@@ -26,7 +24,9 @@ import {
   shared,
   setShared,
 } from "herdr";
-import { readdir, writeFile } from "fs/promises";
+import { readdir } from "fs/promises";
+import { expand, on, json, missingOf, writeOn, registrySetup, cacheKey, parseRegistry, updateRegistry } from "./io.js";
+import { Review } from "./review.js";
 import {
   DEFAULT_MARKERS,
   registryRows,
@@ -42,13 +42,20 @@ import {
   ago,
   splitMatch,
   basename,
+  hiddenPaths,
+  autoHidden,
+  purgeHidden,
+  setHidden,
+  revealIndex,
+  PURGE_DAYS,
+  moveProject,
+  moveCandidate,
 } from "./projects.js";
-import { isP5, Morph, slab, keycap as p5Keycap } from "./p5.js";
-import { isAwacs, AWACS_ROW, HIT, NO_CONTACT, Lock, lock, diamond, prompt, ticks, keycap as awacsKeycap } from "./awacs.js";
-import { ModalFrame, modal, heading, machinePill, searchField, footer as modalFooter } from "./modal.js";
+import { isP5, Morph, slab } from "./p5.js";
+import { isAwacs, AWACS_ROW, HIT, NO_CONTACT, Lock, lock, diamond, prompt, ticks } from "./awacs.js";
+import { ModalFrame, modal, heading, machinePill, searchField, footer as modalFooter, keycap, groupHeader } from "./modal.js";
 
 const OPEN = "q-saddle.project.overlay";
-const CACHE = "q-saddle.project.rows";
 const ROW_HEIGHT = 50;
 const SELECTED_EXTRA = 16;
 const HEADER_HEIGHT = 28;
@@ -77,9 +84,6 @@ const KIND_COLOR = {
 };
 const MAIN = "\u{f09d1}  main";
 
-const expand = (path, h) => path.replace(/^~(?=\/|$)/, h);
-const on = (machine) => (machine ? { on: machine } : {});
-
 const kindAt = (path, machine) =>
   machine
     ? exec("ls", ["-A", path], { on: machine }).then(
@@ -89,6 +93,7 @@ const kindAt = (path, machine) =>
     : readdir(path).then(kindOf, () => null);
 const emptyCache = () => ({
   registered: [],
+  hidden: [],
   swept: [],
   kinds: {},
   root: null,
@@ -101,31 +106,15 @@ async function realpath(path, machine) {
   return r.code === 0 ? r.stdout.trim() : path;
 }
 
-async function homeOn(machine) {
-  if (!machine) return home();
-  const r = await exec("sh", ["-c", 'printf %s "$HOME"'], { on: machine });
-  if (r.code !== 0 || !r.stdout) throw new Error(`no home on ${machine}`);
-  return r.stdout;
-}
-
-// writeTextFile writes only here; hc carries the file to another machine.
-async function writeOn(machine, path, next, previous) {
-  if (!machine) return writeTextFile(path, next, previous);
-  const scratch = `${appHome()}/data/q-lab/q-saddle/registry-write.json`;
-  await writeFile(scratch, next);
-  const r = await exec("sh", [
-    "-c",
-    'hc file write --on "$1" "$2" < "$3"',
-    "sh",
-    machine,
-    path,
-    scratch,
-  ]);
-  if (r.code !== 0) throw new Error(r.stderr.trim() || `hc file write: ${r.code}`);
-}
-
 export default class Projects extends View {
   init(_props, cx) {
+    if (props()?.review) {
+      this.review = cx.new(Review, {
+        machine: props().machine ?? null,
+        overlay: props().overlay,
+      });
+      return;
+    }
     this.frame = cx.new(ModalFrame, {});
     this.morph = cx.new(Morph, {});
     this.lock = cx.new(Lock, {});
@@ -137,7 +126,7 @@ export default class Projects extends View {
     // Like space.new from a key: the focused space's machine.
     this.machine =
       spaces().find((s) => s.id === focused()?.space)?.machine ?? null;
-    this.cacheKey = this.machine ? `${CACHE}.${this.machine}` : CACHE;
+    this.cacheKey = cacheKey(this.machine);
     this.input = InputState.new({ placeholder: "Open a project…" });
     this.input.on("change", (_e, cx) => this.filterChanged(cx));
     this.input.on("submit", (_e, cx) => this.open(cx));
@@ -146,6 +135,8 @@ export default class Projects extends View {
     this.at = 0;
     this.scroll = VirtualListScrollHandle.new();
     this.zoxide = null;
+    this.pending = null;
+    this.opening = false;
     this.asked = 0;
     this.error = null;
     // The last open's rows, drawn at once: reads and the sweep stall while the dialog opens.
@@ -153,19 +144,15 @@ export default class Projects extends View {
     Object.assign(this, emptyCache(), { home: this.machine ? null : home() }, cache);
     cx.spawn(async (cx) => {
       try {
-        const text = await readTextFile(
-          `${appHome()}/data/q-lab/q-saddle/config.json`,
-        );
-        const config = text ? JSON.parse(text) : {};
-        this.home = await homeOn(this.machine);
-        this.registryFile = expand(
-          config.project_registry_file ??
-            "~/.local/state/herdr-projects/registry.json",
-          this.home,
-        );
+        const { config, home: h, registryFile } = await registrySetup(this.machine);
+        this.home = h;
+        this.registryFile = registryFile;
         this.markers = config.project_markers ?? DEFAULT_MARKERS;
-        const registry = await readTextFile(this.registryFile, on(this.machine));
-        this.registered = registry ? registryRows(JSON.parse(registry)) : [];
+        const saved = await readTextFile(this.registryFile, on(this.machine));
+        const registry = parseRegistry(saved);
+        this.show(registry);
+        cx.notify();
+        if (saved) this.show(await this.purged(registry, saved));
         cx.notify();
         this.root = await realpath(
           expand(config.projects_root ?? "~/Projects", this.home),
@@ -205,14 +192,40 @@ export default class Projects extends View {
     if (shared(OPEN) === props()?.overlay) setShared(OPEN, null);
   }
 
+  show(registry) {
+    this.registered = registryRows(registry);
+    this.hidden = hiddenPaths(registry);
+  }
+
+  async purged(registry, text) {
+    const check = await missingOf(autoHidden(registry), this.machine);
+    if (!check) return registry;
+    const next = purgeHidden(registry, check, Math.floor(Date.now() / 1000));
+    if (!next.changed) return registry;
+    try {
+      await writeOn(this.machine, this.registryFile, json(next.registry), text);
+      return next.registry;
+    } catch {
+      return registry;
+    }
+  }
+
+  async changeRegistry(change) {
+    this.show(await updateRegistry(this.machine, this.registryFile, change));
+  }
+
   rows() {
-    return pickerRows(this.registered, this.swept, this.zoxide).filter((r) =>
-      matches(r, this.query, this.home),
-    );
+    return pickerRows(
+      this.registered,
+      this.swept,
+      this.zoxide,
+      this.hidden,
+    ).filter((r) => matches(r, this.query, this.home));
   }
 
   filterChanged(cx) {
     this.query = this.input.value();
+    this.pending = null;
     this.at = 0;
     this.scroll.scroll_to_item(0);
     this.zoxide = null;
@@ -235,33 +248,89 @@ export default class Projects extends View {
   }
 
   open(cx) {
+    if (this.pending) return this.move(cx);
+    if (this.opening) return;
     const row = this.rows()[this.at];
     if (!row) return;
+    const query = this.query;
+    this.opening = true;
+    cx.spawn(async (cx) => {
+      const check = await missingOf([row.path], this.machine);
+      this.opening = false;
+      if (this.query !== query) return;
+      if (check?.missing.length) {
+        if (row.group !== "recent" && row.group !== "registered") {
+          notify({
+            title: `Saddle: ${row.name} is gone`,
+            body: `${shortPath(row.path, this.home)} no longer exists.`,
+          });
+          return;
+        }
+        const to = moveCandidate(row.path, this.swept);
+        if (to) this.pending = { row, to };
+        else await this.hide(row);
+        return cx.notify();
+      }
+      this.launch(row);
+    });
+  }
+
+  move(cx) {
+    const { row, to } = this.pending;
+    this.pending = null;
     cx.spawn(async () => {
-      await this.remember(row.path).catch((e) =>
-        notify({
-          title: "Saddle: project not recorded",
+      try {
+        await this.changeRegistry((r) => moveProject(r, row.path, to));
+      } catch (e) {
+        return notify({
+          title: "Saddle: project not moved",
           body: e.message,
           level: "warning",
-        }),
-      );
-      // Closing this overlay hands the keyboard back; open the launcher after so it keeps it.
-      this.dismiss();
-      const space = spaceShowing(row.path, panes(), spaces(), this.machine);
-      if (space) return run("space.select", { id: space.id });
-      openOverlay({
-        mod: "q-saddle-tab",
-        props: {
-          direct: true,
-          folder: row.path,
-          machine: this.machine,
-          label: MAIN,
-          ...(row.name !== basename(row.path) && { name: row.name }),
-        },
-        kind: "dialog",
-        width: isP5() || isAwacs() ? 620 : 520,
-        ...(isP5() || isAwacs() ? { frame: "none" } : {}),
+        });
+      }
+      this.launch({ ...row, path: to });
+    });
+  }
+
+  async hide(row) {
+    const now = Math.floor(Date.now() / 1000);
+    try {
+      await this.changeRegistry((r) => setHidden(r, row.path, true, now));
+      notify({
+        title: `Saddle: ${row.name} is gone`,
+        body: `${shortPath(row.path, this.home)} no longer exists; hidden, removed in ${PURGE_DAYS} days.`,
       });
+    } catch (e) {
+      notify({ title: "Saddle: project not hidden", body: e.message, level: "warning" });
+    }
+    this.at = 0;
+    this.scroll.scroll_to_item(0);
+  }
+
+  async launch(row) {
+    await this.remember(row.path).catch((e) =>
+      notify({
+        title: "Saddle: project not recorded",
+        body: e.message,
+        level: "warning",
+      }),
+    );
+    // Closing this overlay hands the keyboard back; open the launcher after so it keeps it.
+    this.dismiss();
+    const space = spaceShowing(row.path, panes(), spaces(), this.machine);
+    if (space) return run("space.select", { id: space.id });
+    openOverlay({
+      mod: "q-saddle-tab",
+      props: {
+        direct: true,
+        folder: row.path,
+        machine: this.machine,
+        label: MAIN,
+        ...(row.name !== basename(row.path) && { name: row.name }),
+      },
+      kind: "dialog",
+      width: isP5() || isAwacs() ? 620 : 520,
+      ...(isP5() || isAwacs() ? { frame: "none" } : {}),
     });
   }
 
@@ -272,15 +341,35 @@ export default class Projects extends View {
       ...on(this.machine),
     }).catch(() => null);
     const key = top?.code === 0 ? top.stdout.trim() : path;
-    const text = await readTextFile(this.registryFile, on(this.machine));
-    const registry = text ? JSON.parse(text) : { version: 1, projects: {} };
     const now = Math.floor(Date.now() / 1000);
-    const next = `${JSON.stringify(useProject(registry, key, now), null, 2)}\n`;
-    await writeOn(this.machine, this.registryFile, next, text);
+    await this.changeRegistry((r) => useProject(r, key, now));
   }
 
   onKey(e, cx) {
+    if (e.key === "escape" && this.pending) {
+      const { row } = this.pending;
+      this.pending = null;
+      cx.spawn(async (cx) => {
+        await this.hide(row);
+        cx.notify();
+      });
+      cx.stop_propagation();
+      return cx.notify();
+    }
     if (e.key === "escape") return this.dismiss();
+    if (this.pending) return;
+    if (e.keystroke === "ctrl-r") {
+      this.dismiss();
+      return openOverlay({
+        mod: "q-saddle-project",
+        props: { review: true, machine: this.machine },
+        kind: "window",
+        key: "q-saddle-review",
+        width: 560,
+        height: 0.8,
+        frame: "none",
+      });
+    }
     const n = this.rows().length;
     if (!n) return;
     if (e.key === "down") this.at = (this.at + 1) % n;
@@ -292,9 +381,7 @@ export default class Projects extends View {
   }
 
   reveal() {
-    const items = withHeaders(this.rows());
-    const i = items.findIndex((item) => item.row === this.at);
-    this.scroll.scroll_to_item(items[i - 1]?.header ? i - 1 : i);
+    this.scroll.scroll_to_item(revealIndex(this.rows(), this.at));
   }
 
   tile(t, r, space) {
@@ -438,59 +525,36 @@ export default class Projects extends View {
       .when(meta !== null, (el) => el.child(meta));
   }
 
-  header(t, group) {
+  header(group) {
     const label = {
       recent: "Recent",
       registered: "Registered",
       zoxide: "zoxide match",
       found: `In ${shortPath(this.root ?? "", this.home)}`,
     }[group];
-    if (isAwacs())
-      return h_flex()
-        .h(HEADER_HEIGHT)
-        .px(12)
-        .pb(4)
-        .gap(10)
-        .items_end()
-        .text_size(9.5)
-        .font_weight(500)
-        .text_color("#7f9bb0")
-        .child(label.toUpperCase())
-        .child(div().flex_1().h(0).mb(5).border_t(1).border_dashed().border_color("#2f5a78"));
-    return h_flex()
-      .h(HEADER_HEIGHT)
-      .px(10)
-      .pb(4)
-      .items_end()
-      .text_size(11.5)
-      .font_medium()
-      .text_color(t.muted)
-      .child(label);
-  }
-
-  keycap(t, key, label) {
-    return h_flex()
-      .gap(5)
-      .items_center()
-      .child(
-        div()
-          .px(5)
-          .h(18)
-          .flex()
-          .items_center()
-          .rounded(4)
-          .border_1()
-          .border_color(t.border)
-          .bg(t.raised)
-          .text_size(10.5)
-          .text_color(t.foreground)
-          .child(key),
-      )
-      .child(div().text_size(11.5).text_color(t.muted).child(label));
+    return groupHeader(label, HEADER_HEIGHT);
   }
 
   body(t, rows) {
     if (this.error) return div().text_color(t.blocked).child(this.error);
+    if (this.pending)
+      return v_flex()
+        .h(ROW_HEIGHT * 2)
+        .items_center()
+        .justify_center()
+        .gap(4)
+        .child(
+          div()
+            .text_color(t.foreground)
+            .child(
+              `${this.pending.row.name} is gone from ${shortPath(this.pending.row.path, this.home)}`,
+            ),
+        )
+        .child(
+          div()
+            .text_color(t.muted)
+            .child(`Moved to ${shortPath(this.pending.to, this.home)}?`),
+        );
     if (!rows.length)
       return v_flex()
         .h(ROW_HEIGHT * 2)
@@ -546,7 +610,7 @@ export default class Projects extends View {
             .slice(range.start, range.end)
             .map((item) =>
               item.header
-                ? this.header(t, item.header)
+                ? this.header(item.header)
                 : this.row(
                     t,
                     rows[item.row],
@@ -573,12 +637,11 @@ export default class Projects extends View {
   }
 
   render() {
+    if (this.review) return div().size_full().child(this.review);
     const t = theme();
     const rows = this.rows();
     const p5 = isP5();
     const awacs = isAwacs();
-    const keycap = (k, l) =>
-      awacs ? awacsKeycap(k, l) : p5 ? p5Keycap(k, l) : this.keycap(t, k, l);
     return modal(v_flex()
       .id("q-saddle-project")
       .on_key_down((e, cx) => this.onKey(e, cx))
@@ -625,9 +688,16 @@ export default class Projects extends View {
           .when(!p5, (el) => el.border_t(1).border_color(t.border))
           .when(p5, (el) => el.flex_wrap())
           .map(modalFooter)
-          .child(keycap("↑↓", "select"))
-          .child(keycap("⏎", "open"))
-          .child(keycap("esc", "close"))
+          .when(Boolean(this.pending), (el) =>
+            el.child(keycap("⏎", "move & open")).child(keycap("esc", "hide it")),
+          )
+          .when(!this.pending, (el) =>
+            el
+              .child(keycap("↑↓", "select"))
+              .child(keycap("⏎", "open"))
+              .child(keycap("^R", "review"))
+              .child(keycap("esc", "close")),
+          )
           .child(awacs ? ticks() : div().flex_1())
           .child(
             div()
