@@ -5,6 +5,19 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-20
+
+_tracks tag `v1.2.0`_
+
+### Added
+- Open a new agent beside the focused pane with the new q-saddle-agent-split mod, instead of in a whole new tab; a zoomed or lone pane stays zoomed and focused.
+- Review and tidy the project registry in a draggable window opened with ctrl-r in the project picker, and move, hide, remove or edit entries.
+- Picking a project whose folder is gone now offers to move it to the same-named folder or hide it, and auto-hidden entries are purged after seven days, while hand-hidden entries and entries on unplugged volumes are kept.
+- A layout can set `zoom: true` to zoom its focus pane when the tab opens, so the agentic-coding layout can start with Neovim zoomed.
+
+### Changed
+- The AWACS blue is darker (#1e77b9) because the old shade read too bright.
+
 ## [1.1.0] - 2026-11-14
 
 _tracks tag `v1.1.0`_
