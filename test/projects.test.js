@@ -13,6 +13,18 @@ import {
   kindOf,
   ago,
   splitMatch,
+  hiddenPaths,
+  moveProject,
+  purgeHidden,
+  autoHidden,
+  moveCandidate,
+  reviewRows,
+  parseAliases,
+  editProject,
+  setHidden,
+  removeProject,
+  revealIndex,
+  PURGE_DAYS,
 } from "../mods/q-saddle-project/projects.js";
 
 test("registryRows drops hidden, puts used first by recency, then the rest by name", () => {
@@ -259,4 +271,274 @@ test("spaceShowing finds the space on that machine with a pane in that folder", 
   assert.equal(spaceShowing("/p/b", panes, spaces, "vps"), spaces[2]);
   assert.equal(spaceShowing("/p/a", panes, spaces, "vps"), null);
   assert.equal(spaceShowing("/p/c", panes, spaces, null), null);
+});
+
+const DAY = 86400;
+
+test("pickerRows leaves out hidden registry paths from the sweep and zoxide", () => {
+  const rows = pickerRows([], ["/p/hid", "/p/b"], "/p/hid", ["/p/hid"]);
+  assert.deepEqual(
+    rows.map((r) => r.path),
+    ["/p/b"],
+  );
+});
+
+test("hiddenPaths lists every hidden registry path", () => {
+  assert.deepEqual(
+    hiddenPaths({
+      projects: {
+        "/p/a": { name: "a", hidden: true },
+        "/p/b": { name: "b" },
+        "/p/c": { name: "c", hidden: true, hidden_at: 1 },
+      },
+    }),
+    ["/p/a", "/p/c"],
+  );
+});
+
+test("moveProject re-keys the entry, keeps its metadata and unhides it", () => {
+  const before = {
+    version: 1,
+    projects: {
+      "/p/old/foo": {
+        name: "Foo",
+        sources: ["manual"],
+        aliases: ["f"],
+        hidden: true,
+        hidden_at: 5,
+        last_used_at: 9,
+      },
+      "/p/z": { name: "z", sources: [] },
+    },
+  };
+  const after = moveProject(before, "/p/old/foo", "/p/new/foo");
+  assert.deepEqual(Object.keys(after.projects), ["/p/new/foo", "/p/z"]);
+  assert.deepEqual(after.projects["/p/new/foo"], {
+    name: "Foo",
+    sources: ["manual"],
+    aliases: ["f"],
+    last_used_at: 9,
+  });
+  assert.ok(before.projects["/p/old/foo"]);
+});
+
+test("moveProject onto a registered path merges into it", () => {
+  const after = moveProject(
+    {
+      projects: {
+        "/p/old/foo": {
+          name: "Old",
+          sources: ["manual"],
+          aliases: ["f", "g"],
+          last_used_at: 9,
+        },
+        "/p/new/foo": {
+          name: "New",
+          sources: ["claude"],
+          aliases: ["g"],
+          last_used_at: 3,
+        },
+      },
+    },
+    "/p/old/foo",
+    "/p/new/foo",
+  );
+  assert.deepEqual(after.projects, {
+    "/p/new/foo": {
+      name: "New",
+      sources: ["claude"],
+      aliases: ["g", "f"],
+      last_used_at: 9,
+    },
+  });
+});
+
+test("setHidden with a time hides the entry and stamps hidden_at", () => {
+  const after = setHidden(
+    { projects: { "/p/a": { name: "a", sources: [], last_used_at: 2 } } },
+    "/p/a",
+    true,
+    100,
+  );
+  assert.deepEqual(after.projects["/p/a"], {
+    name: "a",
+    sources: [],
+    last_used_at: 2,
+    hidden: true,
+    hidden_at: 100,
+  });
+});
+
+test("purgeHidden deletes auto-hidden entries gone for over 7 days", () => {
+  const now = 100 * DAY;
+  const { registry, changed } = purgeHidden(
+    {
+      projects: {
+        "/p/old": { name: "old", hidden: true, hidden_at: now - 8 * DAY },
+        "/p/young": { name: "young", hidden: true, hidden_at: now - 6 * DAY },
+        "/p/byhand": { name: "byhand", hidden: true },
+        "/p/back": { name: "back", hidden: true, hidden_at: now - 9 * DAY },
+        "/v/away": { name: "away", hidden: true, hidden_at: now - 9 * DAY },
+      },
+    },
+    { missing: ["/p/old", "/p/young", "/p/byhand", "/v/away"], gone: ["/p/old", "/p/young", "/p/byhand"] },
+    now,
+  );
+  assert.equal(changed, true);
+  assert.deepEqual(registry.projects, {
+    "/p/back": { name: "back" },
+    "/p/byhand": { name: "byhand", hidden: true },
+    "/p/young": { name: "young", hidden: true, hidden_at: now - 6 * DAY },
+    "/v/away": { name: "away", hidden: true, hidden_at: now - 9 * DAY },
+  });
+});
+
+test("purgeHidden reports no change when nothing is due", () => {
+  const before = {
+    projects: { "/p/a": { name: "a", hidden: true, hidden_at: 10 } },
+  };
+  const { registry, changed } = purgeHidden(
+    before,
+    { missing: ["/p/a"], gone: ["/p/a"] },
+    10 + DAY,
+  );
+  assert.equal(changed, false);
+  assert.deepEqual(registry, before);
+});
+
+test("autoHidden lists only entries hidden with hidden_at", () => {
+  assert.deepEqual(
+    autoHidden({
+      projects: {
+        "/p/a": { name: "a", hidden: true, hidden_at: 1 },
+        "/p/b": { name: "b", hidden: true },
+        "/p/c": { name: "c" },
+      },
+    }),
+    ["/p/a"],
+  );
+});
+
+test("moveCandidate returns the one other swept folder with the same name", () => {
+  assert.equal(
+    moveCandidate("/p/old/foo", ["/p/new/foo", "/p/bar"]),
+    "/p/new/foo",
+  );
+  assert.equal(moveCandidate("/p/old/foo", ["/p/a/foo", "/p/b/foo"]), null);
+  assert.equal(moveCandidate("/p/old/foo", ["/p/old/foo"]), null);
+  assert.equal(moveCandidate("/p/old/foo", ["/p/foobar"]), null);
+});
+
+test("reviewRows tags each entry ok, moved or missing, sorted by name", () => {
+  const rows = reviewRows(
+    {
+      projects: {
+        "/p/z": { name: "zed", aliases: ["z"] },
+        "/p/old/foo": { name: "foo", hidden: true, hidden_at: 4 },
+        "/p/gone": { name: "gone" },
+      },
+    },
+    ["/p/old/foo", "/p/gone"],
+    ["/p/new/foo"],
+  );
+  assert.deepEqual(rows, [
+    {
+      path: "/p/old/foo",
+      name: "foo",
+      aliases: [],
+      hidden: true,
+      hiddenAt: 4,
+      status: "moved",
+      candidate: "/p/new/foo",
+    },
+    {
+      path: "/p/gone",
+      name: "gone",
+      aliases: [],
+      hidden: false,
+      hiddenAt: null,
+      status: "missing",
+      candidate: null,
+    },
+    {
+      path: "/p/z",
+      name: "zed",
+      aliases: ["z"],
+      hidden: false,
+      hiddenAt: null,
+      status: "ok",
+      candidate: null,
+    },
+  ]);
+});
+
+test("parseAliases trims, drops empties and duplicates", () => {
+  assert.deepEqual(parseAliases(" a, b ,,a, c "), ["a", "b", "c"]);
+  assert.deepEqual(parseAliases("  "), []);
+});
+
+test("editProject sets name and aliases, falling back to the folder name", () => {
+  const before = {
+    projects: { "/p/foo": { name: "foo", sources: [], aliases: ["x"] } },
+  };
+  assert.deepEqual(
+    editProject(before, "/p/foo", { name: " Foo ", aliases: ["y"] }).projects[
+      "/p/foo"
+    ],
+    { name: "Foo", sources: [], aliases: ["y"] },
+  );
+  assert.deepEqual(
+    editProject(before, "/p/foo", { name: "", aliases: [] }).projects["/p/foo"],
+    { name: "foo", sources: [] },
+  );
+});
+
+test("setHidden hides by hand without hidden_at and unhides fully", () => {
+  const hidden = setHidden(
+    { projects: { "/p/a": { name: "a", hidden: true, hidden_at: 3 } } },
+    "/p/a",
+    true,
+  );
+  assert.deepEqual(hidden.projects["/p/a"], { name: "a", hidden: true });
+  const shown = setHidden(hidden, "/p/a", false);
+  assert.deepEqual(shown.projects["/p/a"], { name: "a" });
+});
+
+test("removeProject deletes the entry", () => {
+  const after = removeProject(
+    { version: 1, projects: { "/p/a": { name: "a" }, "/p/b": { name: "b" } } },
+    "/p/a",
+  );
+  assert.deepEqual(after, { version: 1, projects: { "/p/b": { name: "b" } } });
+});
+
+test("moveProject merge leaves out fields neither entry had", () => {
+  const after = moveProject(
+    {
+      projects: {
+        "/p/old/foo": { name: "Old", sources: [] },
+        "/p/new/foo": { name: "New", sources: [] },
+      },
+    },
+    "/p/old/foo",
+    "/p/new/foo",
+  );
+  assert.deepEqual(after.projects, { "/p/new/foo": { name: "New", sources: [] } });
+});
+
+test("reviewRows marks every entry unchecked when the check has not run", () => {
+  const rows = reviewRows({ projects: { "/p/a": { name: "a" } } }, null, ["/x/a"]);
+  assert.equal(rows[0].status, "unchecked");
+  assert.equal(rows[0].candidate, null);
+});
+
+test("revealIndex scrolls to a row's group header when it is the first in its group", () => {
+  const rows = [{ group: "a" }, { group: "a" }, { group: "b" }];
+  assert.equal(revealIndex(rows, 0), 0);
+  assert.equal(revealIndex(rows, 1), 2);
+  assert.equal(revealIndex(rows, 2), 3);
+});
+
+test("PURGE_DAYS is a week", () => {
+  assert.equal(PURGE_DAYS, 7);
 });

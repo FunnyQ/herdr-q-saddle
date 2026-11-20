@@ -80,8 +80,8 @@ export function projectsIn(hits, markers) {
   return { swept, kinds };
 }
 
-export function pickerRows(registered, swept, zoxide) {
-  const seen = new Set(registered.map((r) => r.path));
+export function pickerRows(registered, swept, zoxide, hidden = []) {
+  const seen = new Set([...registered.map((r) => r.path), ...hidden]);
   const extra = (path, group) => ({
     path,
     name: basename(path),
@@ -100,6 +100,12 @@ export function pickerRows(registered, swept, zoxide) {
   for (const path of swept)
     if (!seen.has(path)) rows.push(extra(path, "found"));
   return rows;
+}
+
+export function revealIndex(rows, at) {
+  const items = withHeaders(rows);
+  const i = items.findIndex((item) => item.row === at);
+  return items[i - 1]?.header ? i - 1 : i;
 }
 
 export function withHeaders(rows) {
@@ -194,17 +200,123 @@ export function matches(row, query, home) {
   return fuzzy([row.name, ...row.aliases, shortPath(row.path, home)], query);
 }
 
+const withProjects = (registry, projects) => ({
+  ...registry,
+  projects: Object.fromEntries(
+    Object.keys(projects)
+      .sort()
+      .map((k) => [k, projects[k]]),
+  ),
+});
+
 export function useProject(registry, path, now) {
   const projects = { ...registry.projects };
   projects[path] = projects[path]
     ? { ...projects[path], last_used_at: now }
     : { name: basename(path), sources: ["manual"], last_used_at: now };
-  const sorted = Object.fromEntries(
-    Object.keys(projects)
-      .sort()
-      .map((k) => [k, projects[k]]),
+  return withProjects(registry, projects);
+}
+
+const shown = ({ hidden: _hidden, hidden_at: _at, ...entry }) => entry;
+
+export const hiddenPaths = (registry) =>
+  Object.keys(registry.projects ?? {}).filter(
+    (path) => registry.projects[path].hidden === true,
   );
-  return { ...registry, projects: sorted };
+
+export const autoHidden = (registry) =>
+  Object.keys(registry.projects ?? {}).filter(
+    (path) => registry.projects[path].hidden_at !== undefined,
+  );
+
+export function moveProject(registry, from, to) {
+  const { [from]: moved, ...projects } = registry.projects;
+  const there = projects[to];
+  const aliases = [...new Set([...(there?.aliases ?? []), ...(moved.aliases ?? [])])];
+  const used = Math.max(there?.last_used_at ?? 0, moved.last_used_at ?? 0);
+  projects[to] = there
+    ? {
+        ...there,
+        ...(aliases.length && { aliases }),
+        ...(used && { last_used_at: used }),
+      }
+    : shown(moved);
+  return withProjects(registry, projects);
+}
+
+export const setHidden = (registry, path, hidden, at) =>
+  withProjects(registry, {
+    ...registry.projects,
+    [path]: hidden
+      ? { ...shown(registry.projects[path]), hidden: true, ...(at && { hidden_at: at }) }
+      : shown(registry.projects[path]),
+  });
+
+export function removeProject(registry, path) {
+  const { [path]: _gone, ...projects } = registry.projects;
+  return withProjects(registry, projects);
+}
+
+export const PURGE_DAYS = 7;
+const PURGE_AFTER = PURGE_DAYS * 86400;
+
+export function purgeHidden(registry, { missing, gone }, now) {
+  const projects = { ...registry.projects };
+  let changed = false;
+  for (const path of autoHidden(registry)) {
+    if (!missing.includes(path)) projects[path] = shown(projects[path]);
+    else if (gone.includes(path) && now - projects[path].hidden_at > PURGE_AFTER)
+      delete projects[path];
+    else continue;
+    changed = true;
+  }
+  return { registry: changed ? withProjects(registry, projects) : registry, changed };
+}
+
+export function moveCandidate(path, swept) {
+  const same = swept.filter(
+    (p) => p !== path && basename(p) === basename(path),
+  );
+  return same.length === 1 ? same[0] : null;
+}
+
+export function reviewRows(registry, missing, swept) {
+  const gone = new Set(missing ?? []);
+  return Object.entries(registry.projects ?? {})
+    .map(([path, p]) => {
+      const candidate = gone.has(path) ? moveCandidate(path, swept) : null;
+      return {
+        path,
+        name: p.name,
+        aliases: p.aliases ?? [],
+        hidden: p.hidden === true,
+        hiddenAt: p.hidden_at ?? null,
+        status: !missing ? "unchecked" : !gone.has(path) ? "ok" : candidate ? "moved" : "missing",
+        candidate,
+      };
+    })
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+}
+
+export const parseAliases = (text) => [
+  ...new Set(
+    text
+      .split(",")
+      .map((a) => a.trim())
+      .filter(Boolean),
+  ),
+];
+
+export function editProject(registry, path, { name, aliases }) {
+  const { aliases: _old, ...entry } = registry.projects[path];
+  return withProjects(registry, {
+    ...registry.projects,
+    [path]: {
+      ...entry,
+      name: name.trim() || basename(path),
+      ...(aliases.length && { aliases }),
+    },
+  });
 }
 
 export function spaceShowing(path, panes, spaces, machine) {
