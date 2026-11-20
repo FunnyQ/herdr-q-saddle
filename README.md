@@ -9,7 +9,7 @@ Herdr-app mods that open agent layouts, pick projects and SSH targets, restart a
 | `q-saddle-tab`         | `cmd-t`            | Pick a tab layout, harness, model, and effort, then open a tab and apply each pane's split ratio.      |
 | `q-saddle-agent`       | `cmd-shift-c`      | Open `q-saddle-tab` with the layout menu skipped, straight to the agent pick.                          |
 | `q-saddle-agent-split` | none               | Pick a harness, model, and effort, then split the default layout's agent pane beside the focused pane; a zoomed or lone pane ends zoomed. |
-| `q-saddle-project`     | `cmd-o`            | Pick a project from the registry, zoxide, or a `~/Projects` sweep on the focused space's machine; focus its space or open one there. |
+| `q-saddle-project`     | `cmd-o`            | Pick a project from the registry, zoxide, or a `~/Projects` sweep on the focused space's machine; focus its space or open one there. `ctrl-r` opens the registry review window. |
 | `q-saddle-restart`     | `cmd-r`            | Restart the focused agent in place, keeping the pane and its neighbours, on this or another machine.  |
 | `q-saddle-ssh`         | `cmd-shift-s`      | Pick an SSH target and open a tab running `ssh`.                                                       |
 | `q-saddle-quick`       | `` ctrl-` ``       | Toggle a floating terminal for the active space; it keeps its shell, folder and programs while hidden. |
@@ -27,7 +27,7 @@ It copies the seven folders into `~/.config/herdr-app/mods/` and merges `keys.js
 
 Then copy `config.example.json` from this repo to `~/.config/herdr-app/data/q-lab/q-saddle/config.json`. Without `tab_layouts` and `agents`, `cmd-t` has nothing to open. Edit the agents to match the harnesses you have installed.
 
-All seven mods run programs (`exec`, `hc`) and read files outside their folders: the registries in `~/.local/state` and `~/.zsh_history`. Expect `herdr-app check` to fail for `q-saddle-project` while its row cache is filled; the app itself renders it.
+All seven mods run programs (`exec`, `hc`) and read files outside their folders: the registries in `~/.local/state` and `~/.zsh_history`.
 
 ### Develop
 
@@ -52,12 +52,18 @@ Press `` ctrl-` `` to show or hide a centered terminal for the active space. Sta
 
 To move an existing shell pane into the quick terminal, focus it and press `` ctrl-shift-` `` (or run `herdr-app do mod.open --name q-saddle-quick-adopt`). Adoption fails when the space already has a quick terminal.
 
+## Project registry
+
+Pick a registered project whose folder is gone, and the picker looks for one folder with the same name in the `~/Projects` sweep. When it finds one, it asks to move the entry there: Enter moves and opens it, Esc hides the entry. When it finds none, it hides the entry and tells you. A hidden entry whose folder is still gone after 7 days is removed.
+
+Press `ctrl-r` in the picker to open the review window. Drag it by its title; it opens where you left it. It lists every registry entry, the ones that need attention first. Type to filter. Press `tab` to edit the name and aliases, and `ctrl-s` to save. Press Enter to move an entry to the folder found for it, `ctrl-u` to hide or unhide it, and `ctrl-x` twice to remove it. Press `ctrl-r` to check the folders again, and Esc to close it.
+
 ## Files
 
 | What             | Path                                                       | Notes                                                                                                                                                                                                            |
 | ---------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Config           | `~/.config/herdr-app/data/q-lab/q-saddle/config.json`      | Shared by all seven mods. Start from `config.example.json`.                                                                                                                                                      |
-| Project registry | `~/.local/state/herdr-projects/registry.json`              | Written on each pick. Override with `project_registry_file`.                                                                                                                                                     |
+| Project registry | `~/.local/state/herdr-projects/registry.json`              | Written on each pick and by the review window. Override with `project_registry_file`.                                                                                                                                                     |
 | SSH registry     | `~/.local/state/herdr-ssh-targets/registry.json`           | Synced with the SSH config on each open. Override with `ssh_registry_file`.                                                                                                                                      |
 | SSH history      | `~/.zsh_history`                                           | Each SSH pick is appended. Override with `ssh_history_file`.                                                                                                                                                     |
 | Scratch          | `~/.config/herdr-app/data/q-lab/q-saddle/doc-request.json` | The `doc.set` request for split ratios and restarts. Safe to delete.                                                                                                                                             |

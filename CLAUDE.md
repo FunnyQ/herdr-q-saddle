@@ -18,7 +18,7 @@ Personal paths and agents live in config, not code.
 | --------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | Layout launcher | `cmd-t`       | Pick harness + model, open a tab from a `tab_layouts` entry, then apply each pane's `ratio` via `doc.set`.               |
 | Project picker  | `cmd-o`       | Registry + `~/Projects` sweep; focus the existing space or `space.new`.                                                  |
-| Project review  | not built     | Scan and curate the project registry.                                                                                    |
+| Project review  | `ctrl-r`      | Window overlay (`props.review`) from `ctrl-r` in the picker. The picker moves or hides gone paths; auto-hidden ones purge after 7 days. |
 | SSH picker      | `cmd-shift-s` | Pick a target, open a tab running `ssh`. Not `hc machine`: that is for devices running hc, not plain SSH hosts.          |
 | Quick terminal  | `` ctrl-` ``  | One-shot runner toggles a per-space parked shell in a dialog; the dialog's header closes it on a space or layout change. |
 | Restart agent   | `cmd-r`       | In place, keeping side panes. Swap a replacement terminal into the pane (see spike findings).                            |
@@ -60,7 +60,6 @@ Out of v1: worktree launcher (built-in `worktree` mod covers it), personal assis
 - Closing an overlay hands keyboard focus back. To chain overlays, close the current one first, then open the next.
 - `readTextFile` is slow while a dialog opens (~0.5 s for two files); `shared()` is synchronous, so the picker draws its last rows from `shared("q-saddle.project.rows")` before reading anything.
 - `.spin()` inside a `v_virtual_list` row made the window unresponsive. The likely cause is the list re-running its JS renderer every frame. This was not isolated, because Herdr crashed and restarted between tries. Use static marks in virtual lists. A `.loop("top", …)` on one absolute child of the chosen row (`slab` in `p5.js`) did not freeze it (2026-10-31).
-- `herdr-app check` panics (`window.rs:5226`, `Option::unwrap()` on `None`) when a `v_virtual_list` has items, even plain-text ones; the app itself renders it. `q-saddle-project` passes check only when the shared row cache is empty.
 
 ## Restart findings (2026-10-30)
 
@@ -83,6 +82,12 @@ Out of v1: worktree launcher (built-in `worktree` mod covers it), personal assis
 - `setShared(key, null)` and `setShared(key, undefined)` both keep the key in `shared.json` as `null`. No mod API deletes a key; edit `shared.json` only while Herdr is closed.
 - `image()` paths resolve against `~/.config/herdr-app`, and Herdr rejects one whose real path leaves it, so a symlinked mod shows no image and logs no error. Linking only the code files fails too: `herdr-app check` reports `module ./p5.js resolves outside the application directory`. Install `q-saddle-quick` by copy.
 - A terminal belongs to a space only through labels or a parent (2026-11-06). `--label herdr.space=<id>` alone makes Herdr open a new tab with it as a pane. `--parent <t> --outlive-parent` puts it under that terminal's tab as a sub-agent, with no pane. The quick shell stays `--no-parent`: when the parent ends (`cmd-r` kills the agent), the child lives on in no space, and no `hc` command or core method changes a parent after `terminal.run`.
+
+## Registry findings (2026-11-20)
+
+- herdr-workbench's `ProjectEntry` serde struct drops unknown fields: a workbench write erases `hidden_at`, and that entry stays hidden without ever being purged.
+- An entry hidden by hand (the review window, or workbench `review`) has no `hidden_at`, so the purge never removes it.
+- The odin format hook cut the end of `render()` out of `mods/q-saddle-project/main.js` on two writes, and `node --check` still passed. Write that file through the shell and diff it afterwards.
 
 ## Split agent findings (2026-11-17)
 
